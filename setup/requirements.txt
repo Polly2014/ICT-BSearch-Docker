@@ -3,7 +3,7 @@ asgiref==1.0.0
 autobahn==0.17.2
 channels==0.17.3
 daphne==0.15.0
-Django==1.9.1
+Django==1.11.22
 django-crontab==0.7.1
 django-redis==4.7.0
 msgpack-python==0.4.8
