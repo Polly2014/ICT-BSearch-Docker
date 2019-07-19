@@ -1,0 +1,898 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<head>
+	<link rel="stylesheet" href="{% static 'css/w3.css' %}" />
+	<script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+<style type="text/css">
+/*	body{background-color: #1F2739;}
+	#fileName{color: #4DC3FA;}
+	#tbl_fileContent{color: #FFF;}
+	#th_fileContent{color: #A7A1AE;}
+*/
+
+</style>
+<script>
+// 文件装载是个示例程序，需要重写get_a_block和get_total_size(返回文件长度)
+var local_file = [];
+
+/* This function returns an object 
+	{
+		offset:start, 
+		data: an_array_of_bytes_containing_the_actual_read_data_from_uri_with_offset_start
+		matches: the matched array in this block
+	}
+
+	TODO: Please rewrite below function and get_total_size for server side file
+	About cache:
+		1. Bottom line is the data containing the match should be delivered together with this file as cache. Otherwise there will be lots of queries during the load of the page.
+		2. Following query are not necessary cached as internal data has cache.
+
+	About security:
+		1. This page will load a server side file (although read only) through URI in the match. User may modify the match URI locally to load any file on the server, like the private key.
+		2. To avoid this, it is recommended to not use direct URI, but a token (i.e. a number, can be the ID in the file table). Server will map the token to a file URI during the index creation stage or query stage.
+
+*/
+function get_a_block(_uri, _start, _length) {
+	if (_start < 0 || _length < 0) {
+		return;
+	}
+
+	var block_message = {offset:_start, data:[], match_array:[], bytemap:[]};
+	// var _end = Math.min(_start + _length, local_file.length);
+	// block_message.data = local_file.slice(_start, _end);
+	var node_ip = $('#node_ip').val();
+	$.ajax({
+		type: 'post',
+		url: '/blockContentBrowser/',
+		data: {'_uri':_uri, '_start':_start, '_length':_length, '_node_ip':node_ip},
+		async: false,
+		success: function(data){
+			// console.log("Ajax Data:"+data);
+			block_message = data;
+		}
+	})
+	// console.log("After Ajax Return: "+JSON.stringify(block_message));
+	
+	// Debug info
+	logDebugMessage("creating a new block: uri = <i>"+_uri +"</i>, offset = " + block_message.offset + ", length = " + block_message.data.length + ", end at = " + (block_message.offset+block_message.data.length));
+
+	return block_message;
+}
+
+function get_total_size() {
+	//return local_file.length;
+	return {{ fileLength }};
+}
+
+</script>
+<script type="text/javascript">
+// Page 
+// Author: Polly
+function getPageContent(option){
+	var page_id = parseInt($("#page_id").val());
+	var the_matches = $("#the_matches").val();
+	var page_num = $("#page_num").val();
+	var item_num = $("#item_num").val();
+	if(option=='prev'){
+		if(page_id==1){alert("已经是第一页了！");return;};
+		page_id = page_id-1;
+		the_blocks = createBlocksFromMatches(the_matches, page_id, item_num);
+		onRedrawContent(the_blocks);
+	}else{
+		if(page_id==page_num){alert("已经是最后一页了！");return;};
+		page_id = page_id+1;
+		the_blocks = createBlocksFromMatches(the_matches, page_id, item_num);
+		onRedrawContent(the_blocks);
+	}
+	$("#page_id").val(page_id);
+}
+
+</script>
+
+<script>
+// Server side scripts, like PHP/Python, should put the matches array here for client side javascript to consume
+// name should be the URL or a reference to the file (more safe)
+// We support only one name here.
+// var the_matches = [
+// 	{	offset:0x120,	offset_bit:3,	length:8,	name:"within a block, hex in boundary"},
+// 	{	offset:0x130,	offset_bit:5,	length:31,	name:"within a block, bit out of boundary"},
+// 	{	offset:0x2FF,	offset_bit:5,	length:31,	name:"cross two blocks"}, 
+// 	{	offset:0x6FF,	offset_bit:5,	length:2048,name:"cross three blocks"},
+// 	{	offset:0x110,	offset_bit:0,	length:8,	name:"within a block, bit in byte boundary"},
+// 	{	offset:0x710,	offset_bit:5,	length:30,	name:"within the 3 blocks match"},
+// 	{	offset:0x133,	offset_bit:5,	length:31,	name:"Overlapped with previous one"},
+// 	{	offset:0x1200,	offset_bit:0,	length:1,	name:"The last one, do nothing"}
+// ];
+
+var the_matches = [];
+
+// Record the first name in the_matches for later query. no need to initialize by server
+var the_uri = "{{ fileName }}";
+
+</script>
+
+<script>
+// 本部分是显示效果的配置部分
+
+// 每次装载的最小块的大小，以字节为单位
+var block_size = 128;
+
+// 每次装载的最大块是最小块的多少倍
+var block_size_expand = 16;
+
+// 以哪种方式显示数据：注意必须在初始化之前调用切换到合法值的函数OnSwitchXXX。
+var print_as = -1;	// 0 - binary, 1 - hex, 2 - ascii
+var print_binary = 0;
+var print_hex = 1;
+var print_ascii = 2;
+
+// 根据显示类型，每行显示的字节数
+// 当显示类型为ASCII码时，则为每行显示的最大字节数。(ASCII码本身带有换行，如果一行长度超过该长度，则强制插入换行进行显示)
+var bytes_per_line_array = [8, 32, 128];
+
+// 三种不同显示方式时，表格的标题
+var thead_array = [
+	"<td style='text-align:right;'>地址</td><td style='text-align:center;'>ASCII</td><td style='text-align:center;'>十六进制</td><td style='text-align:center;'>二进制 <button onclick='onSwitchPrintMode(print_hex)'>\></button></td>",
+	"<td style='text-align:right;'>地址</td><td style='text-align:center;'>ASCII</td><td style='text-align:center;'>十六进制 <button onclick='onSwitchPrintMode(print_ascii)'>\></button></td><td><button onclick='onSwitchPrintMode(print_binary)'>\<</button> 二...</td>",
+	"<td style='text-align:right;'>地址</td><td>ASCII</td><td><button onclick='onSwitchPrintMode(print_hex)'>\<</button> 十...</td>"
+];
+
+// 匹配的高亮显示模式
+var match_highlight_start = "<a style='background-color: rgba(255, 255, 0, 0.8);'>";
+var match_highlight_end = "</a>"
+
+</script>
+
+
+<script>
+// 测试用数据
+var initial_offset = 0x100;
+
+// 本部分为调试用
+function logDebugMessage(str) {
+	document.getElementById("debug").innerHTML += str + "<br>";
+}
+
+// Print the matches as a table, for debugging
+function logMatches(matches, has_bit) {
+	var str_html = "<table style='width:80%;'><thead><tr>";
+	str_html += "<td>name</td><td>offset</td><td>offset_bit</td><td>length</td>"
+	str_html += has_bit?"<td>bit_start</td><td>bit_end</td>":"";
+	str_html += "</tr></thead><tbody>";
+
+	for (var i=0; i<matches.length; i++) {
+		str_html += "<tr>";
+		str_html += "<td>"+matches[i].name+"</td><td>"+matches[i].offset+"</td><td>"+matches[i].offset_bit+"</td><td>"+matches[i].length+"</td>"
+		str_html += has_bit?("<td>"+matches[i].bit_start+"</td><td>"+matches[i].bit_end+"</td>"):"";
+		str_html += "</tr>";
+	}
+	str_html += "</tbody></table><br>";
+	logDebugMessage(str_html);
+}
+
+</script>
+
+
+<script>
+// This part convert the matches to the blocks
+
+// 本部分是处理的匹配成功列表
+// 匹配结果大概长这样：
+// 'matches': [{
+//		'length': 31,
+//		'offset_bit': 5,
+//		'name': "/run/media/root/b9198c50-0ae7-4476-81dd-1d0a548046ad/test8/He's.Just.Not.That.Into.You.mkv",
+//		'offset': 1724704779
+//	}, {...
+//
+// name: 匹配的文件路径
+// offset: 匹配结果偏移量，从文件头部开始的，以字节为单位
+// offset_bit: 匹配结果offset所在字节(byte)的位(bit)偏移量，取值0~7，以字节为单位
+// length: 匹配结果长度，以字节为单位
+
+// Return the last block's end byte offset (not included in the block)
+function getBlocksEnd(blocks) {
+	return blocks[blocks.length-1].offset + blocks[blocks.length-1].data.length;
+}
+
+// 
+function createBlocksFromMatches(matches, page_id, item_num) {
+	if (matches == null || matches.length <= 0) {
+		return [];
+	}
+
+	the_uri = matches[0].name;
+
+	matches = $.parseJSON(matches);
+	matches = matches.slice((page_id-1)*item_num, page_id*item_num);
+	// console.log("Loaded Page-"+page_id+" ["+item_num+"]");
+	logMatches(matches, false);
+
+	// Format matches array to what we want
+	// 1. sort according to the match.offset
+	matches.sort(function(a, b) {return (a.offset - b.offset)});
+
+	// 2. Add bit-level match format to matches
+	//		start: the start position, in bit level 
+	//		end: the end position, in bit level, not included
+	// After this, honor bit_end and bit_start only, which is calculated from file start point
+	for (var i = 0; i < matches.length; i++) {
+		matches[i].bit_start = matches[i].offset*8+matches[i].offset_bit;
+		matches[i].bit_end = matches[i].bit_start+matches[i].length;
+	}
+	logMatches(matches, true);
+
+	// 3. Merged neighbor and overlapped matches: use a new array to avoid O(N^2) operation when removing element from matches
+	var new_matches = [matches[0]];
+	var new_i = 0;	// always tracks the last element of new matches 
+	for (var i = 1; i < matches.length; i++) {
+		if (new_matches[new_i].bit_end >= matches[i].bit_start) {
+			// new_i is overlapped/neighbor with i, merge these two items, keep new_i to evaluate next i
+			new_matches[new_i].bit_end = Math.max(new_matches[new_i].bit_end, matches[i].bit_end);
+		} else {
+			// not overlapped, copy i to new_i+1, hope JS's push is not stupid and takes O(N^2), should take O(NlogN)
+			new_matches.push(matches[i]);
+			new_i++;
+		}
+	}
+	matches = new_matches;
+	logMatches(matches, true);
+
+	// New blocks time!
+	// 1. Create the new_blocks array and linked possible matches to each block
+	var new_blocks = [];
+	for (var i = 0; i < matches.length; i++) {
+		var match = matches[i];
+		logDebugMessage("Process "+JSON.stringify(match));
+
+		// Only when last block does not contain current match we need to create a new block
+		if (new_blocks.length == 0 || match.bit_start >= getBlocksEnd(new_blocks)*8) {
+			// Append a new block
+			new_blocks.push(get_a_block(match.name, Math.floor(match.bit_start / (block_size*8)) * block_size, block_size));
+		}
+
+		// By now the last block in new_blocks is the one that contains the match
+		new_blocks[new_blocks.length-1].match_array.push(match);
+
+		// We still need to check whether the match exceed current block, i.e. cross multiple blocks
+		while (match.bit_end >= getBlocksEnd(new_blocks)*8) {
+			// If so, create multiple consecutive new blocks and attach the match also, until the match is covered
+			new_blocks.push(get_a_block(match.name, getBlocksEnd(new_blocks), block_size));
+			new_blocks[new_blocks.length-1].match_array.push(match);
+		}
+	}
+	logDebugMessage("=============");
+
+	// 2. For each block, calculate the match bytemap
+	for (var b = 0; b < new_blocks.length; b++) {
+		var block = new_blocks[b];
+		var block_bit_start = block.offset * 8;
+		var block_bit_end = (block.offset+block.length) * 8;
+
+		// This array records each bit in the block is within a match or not
+		var bitmap = new Uint8Array(block.data.length * 8);
+
+		// Init each value to 0
+		for (var i = 0; i < bitmap.length; i++) {
+			bitmap[i] = 0;
+		}
+
+		// For those in match, set the value to 1
+		for (var m = 0; m < block.match_array.length; m++) {
+			var match = block.match_array[m];
+			logDebugMessage("Process "+JSON.stringify(match));
+			logDebugMessage("" + Math.max(0,(match.bit_start - block_bit_start)) + ", " + Math.min((block.data.length * 8), match.bit_end - block_bit_start));
+			for (var i = Math.max(0, match.bit_start - block_bit_start); 
+				i < Math.min(block.data.length * 8, match.bit_end - block_bit_start);
+				i++) {
+				bitmap[i] = 1;
+			}
+		}
+		logDebugMessage(bitmap);
+
+		// Compress bitmap to bytemap
+		var bytemap = new Uint8Array(block.data.length);
+		for (var i = 0; i < bytemap.length; i++) {
+			var tmp = 0;
+			for (var j = 0; j < 8; j++) {
+				tmp <<= 1;
+				tmp += bitmap[i*8+j];
+			}
+			bytemap[i] = tmp;
+		}
+
+		// // Link the bytemap to block, we will use this in decorating the block
+		new_blocks[b].bytemap = bytemap;
+
+		logDebugMessage(bytemap);
+	}
+
+	return new_blocks;
+}
+</script>
+
+
+<script>
+// 内部数据：一个block的数组，每个block将会显示成为表中的一行。
+// block包含三个数据：
+//		offset ：	本快数据在文件中的偏移量。block数组按照offset从小到大排序。
+//		data   ：	本快数据数组，UintArray
+//		matches：	本快数据中包含的匹配项
+//
+// 两个block的相邻：如果前面一个block的偏移量加上数据长度等于后一个block的偏移量，那么这两个block相邻
+//
+// 如果某个block和前一个block不相邻，则会在该block在表中的那行之前插入一行，使得用户可以装载这个block之前的数据，如：
+// 				    ↑↑ 128 | 256 | 512 | 1024 | 2048 bytes ↑↑
+// 如果某个block和后一个block不相邻，则会在该block在表中的那行之后插入一行，使得用户可以装载这个block之后的数据，如：
+//                  ↓↓ 128 | 256 | 512 | 1024 | 2048 bytes ↓↓
+//
+// 一个block的显示效果如下（二进制显示模式），其中该block中和matches匹配的部分，会以高亮显示。
+//
+//                                         ↑↑ 【128】 【256】 【512】 【768】 bytes ↑↑
+// 0x500	 var loc	0A 76 61 72 20 6C 6F 63	  00001010 01110110 01100001 01110010 00100000 01101100 01101111 01100011
+// 0x508	al_file 	61 6C 5F 66 69 6C 65 20	  01100001 01101100 01011111 01100110 01101001 01101100 01100101 00100000
+// 0x510	= [];  /	3D 20 5B 5D 3B 0A 0A 2F	  00111101 00100000 01011011 01011101 00111011 00001010 00001010 00101111
+// 0x518	* This f	2A 20 54 68 69 73 20 66	  00101010 00100000 01010100 01101000 01101001 01110011 00100000 01100110
+// 0x520	unction 	75 6E 63 74 69 6F 6E 20	  01110101 01101110 01100011 01110100 01101001 01101111 01101110 00100000
+// 0x528	returns 	72 65 74 75 72 6E 73 20	  01110010 01100101 01110100 01110101 01110010 01101110 01110011 00100000
+// 0x530	an objec	61 6E 20 6F 62 6A 65 63	  01100001 01101110 00100000 01101111 01100010 01101010 01100101 01100011
+// 0x538	t   {   	74 20 0A 09 7B 0A 09 09	  01110100 00100000 00001010 00001001 01111011 00001010 00001001 00001001
+// 0x540	URI:uri,	55 52 49 3A 75 72 69 2C	  01010101 01010010 01001001 00111010 01110101 01110010 01101001 00101100
+// 0x548	    offs	20 0A 09 09 6F 66 66 73	  00100000 00001010 00001001 00001001 01101111 01100110 01100110 01110011
+// 0x550	et:start	65 74 3A 73 74 61 72 74	  01100101 01110100 00111010 01110011 01110100 01100001 01110010 01110100
+// 0x558	,    dat	2C 20 0A 09 09 64 61 74	  00101100 00100000 00001010 00001001 00001001 01100100 01100001 01110100
+// 0x560	a: an_ar	61 3A 20 61 6E 5F 61 72	  01100001 00111010 00100000 01100001 01101110 01011111 01100001 01110010
+// 0x568	ray_of_b	72 61 79 5F 6F 66 5F 62	  01110010 01100001 01111001 01011111 01101111 01100110 01011111 01100010
+// 0x570	ytes_con	79 74 65 73 5F 63 6F 6E	  01111001 01110100 01100101 01110011 01011111 01100011 01101111 01101110
+// 0x578	taining_	74 61 69 6E 69 6E 67 5F	  01110100 01100001 01101001 01101110 01101001 01101110 01100111 01011111
+//                                           ↓↓ 【128】 【256】 【384】 bytes ↓↓
+// 
+// 
+var the_blocks = [];
+
+// IDs of a block and its preload/postload bar
+var block_id_str = "block_";
+var block_id_preload = "preload_";
+var block_id_postload = "postload_";
+var block_id_load = "blockload_"
+function get_block_id_str(block_idx) {
+	return the_blocks[block_idx].offset.toString(16);
+}
+function get_block_id(block_idx) {
+	return block_id_str + get_block_id_str(block_idx);
+}
+function get_preload_id(block_idx) {
+	return block_id_preload + get_block_id_str(block_idx);
+}
+function get_postload_id(block_idx) {
+	return block_id_postload + get_block_id_str(block_idx);
+}
+function get_blockload_id(block_idx) {
+	return block_id_load + ((block_idx==the_blocks.length)?get_total_size().toString(16):get_block_id_str(block_idx));
+}
+
+// Get the block index from the id
+// TODO: fastern by using binary search (currently not necessary if blocks.length < 1000)
+function get_index_from_offset(blocks, offset) {
+	for (var i = 0; i < blocks.length; i++) {
+		if (blocks[i].offset == offset) {
+			return i;
+		}
+	}
+
+	if (i == blocks.length && get_total_size() == offset) {
+		return i;
+	}
+
+	console.log("CANNOT find index for offset "+offset+" (0x"+offset.toString(16)+")");
+	return -1;
+}
+
+// Turn Uint8 into a HTML character format
+var maximum_ASCII_per_line = bytes_per_line_array[2];
+var no_br_counter = 0;
+function uint8_to_ASCII_string(value, print_type) {
+	if (print_type == print_ascii) {
+		var encode_char = "";
+
+		// For pure ascii format
+		if (value == 10) {
+			no_br_counter = 0;
+			encode_char = "<br>";
+		} else if (value == 32) {
+			no_br_counter++;
+			encode_char = "&nbsp;";
+		} else if (value == 9) {
+			no_br_counter += 4;
+			encode_char = "&nbsp;&nbsp;&nbsp;&nbsp;";
+		} else if (value > 32 && value < 127) {
+			no_br_counter++;
+			encode_char = "&#" + value + ";";
+		}
+
+		if (no_br_counter >= maximum_ASCII_per_line) {
+			no_br_counter = 0;
+			encode_char += "&#8617;<br>";
+		}
+
+		return encode_char;
+	} else {
+		if (value <= 0x20) {
+			return "&nbsp;";
+		} else {
+			return "&#" + value + ";";
+		}
+	}
+}
+
+// Print the block into HTML
+function getBlockHTML(blocks, block_idx, print_type) {
+	var str_html = "";
+	var bytes_per_line = bytes_per_line_array[print_type];
+	var block = blocks[block_idx];
+	var match; 				// current match
+	var match_idx;			// current match's index
+	var match_start_byte;	// The first byte that matches
+	var match_end_byte;		// The last byte that matches
+	var in_match;
+
+
+	// print address
+	str_html += "<td style='vertical-align:top;text-align:right;'>";
+	if (print_type == 2) {
+		// For pure ascii, we just print the first address and last address. Others are meaningless.
+		str_html += "0x" + block.offset.toString(16).toUpperCase() 
+			+ "<br>~<br>0x" 
+			+ (block.offset + block.data.length - 1).toString(16).toUpperCase();
+	} else {
+		for (var i = 0; i < block.data.length / bytes_per_line; i++) {
+			var cur_offset = i*bytes_per_line;
+			str_html += "0x" + (cur_offset + block.offset).toString(16).toUpperCase() + "<br>";
+		}
+	}
+	str_html += match_highlight_end + "</td>";
+
+	// print ASCII
+	str_html += (print_type == print_ascii) ? "<td style='text-align:left;'>" : "<td style='text-align:center;'>";
+	no_br_counter = 0;	// the forced <br> is reinited for each block when print ASCII in ASCII mode
+	for (var i = 0; i < block.data.length / bytes_per_line; i++) {
+		for (var j = 0; j < bytes_per_line && i*bytes_per_line+j < block.data.length; j++) {
+			var cur_offset = i*bytes_per_line + j;
+			if (block.bytemap.length > 0) {
+				var last_match = (i==0 && j==0) ? 0 : block.bytemap[cur_offset-1];
+				var cur_match = block.bytemap[cur_offset];
+				if (!last_match && cur_match) str_html += match_highlight_start;
+				if (last_match && !cur_match) str_html += match_highlight_end;
+			}
+			str_html += uint8_to_ASCII_string(block.data[cur_offset], print_type);
+		}
+		if (print_type != 2) {
+			str_html += "<br>";
+		}
+	}
+	if (block.bytemap.length > 0 && block.bytemap[block.bytemap.length-1]) str_html += match_highlight_end;
+	str_html += "</td>";
+
+	// For hex and binary, we need to print HEX
+	if (print_type == print_binary || print_type == print_hex) {
+		str_html += "<td style='text-align:center;'>";
+		for (var i = 0; i < block.data.length / bytes_per_line; i++) {
+			for (var j = 0; j < bytes_per_line && i*bytes_per_line+j < block.data.length; j++) {
+				var cur_offset = i*bytes_per_line + j;
+
+				// Let's split the byte into two HEX (4-bits)
+				var cur_bytes = [(block.data[cur_offset]&0xF0) >> 4, block.data[cur_offset]&0x0F];
+				var cur_matches; 
+				if (block.bytemap.length > 0) {
+					cur_matches =
+						[ (i==0 && j==0) ? 0 : block.bytemap[cur_offset-1]&0x0F,
+						block.bytemap[cur_offset]&0xF0, 
+						block.bytemap[cur_offset]&0x0F];
+				}
+				for (var k=0; k<cur_bytes.length; k++) {
+					if (block.bytemap.length > 0) {
+						var last_match = cur_matches[k];
+						var cur_match = cur_matches[k+1];
+						if (!last_match && cur_match) str_html += match_highlight_start;
+						if (last_match && !cur_match) str_html += match_highlight_end;
+					}
+					str_html += cur_bytes[k].toString(16).toUpperCase();
+				}
+				str_html += " ";
+			}
+			str_html += "<br>";
+		}
+		str_html += "</td>";
+	}
+
+	// Only when binary we need to print binary
+	if (print_type == print_binary) {
+		str_html += "<td style='text-align:center;'>";
+		for (var i = 0; i < block.data.length / bytes_per_line; i++) {
+			var cur_offset = i*bytes_per_line;
+			for (var j = 0; j < bytes_per_line && i*bytes_per_line + j < block.data.length; j++) {
+				var cur_offset = i*bytes_per_line + j;
+				// Let's split the byte into binary
+				var cur_bytes = new Uint8Array(8);
+				var cur_matches = new Uint8Array(9);
+				cur_matches[0] = (i==0 && j==0) ? 0 : block.bytemap[cur_offset-1]&0x01;
+				for (var k=0; k<8; k++) {
+					if (block.bytemap.length > 0) {
+						cur_matches[k+1] = block.bytemap[cur_offset] & (0x80>>k);
+					}
+					cur_bytes[k] = (block.data[cur_offset] & (0x80>>k)) >> (8-k-1);
+				}
+				for (var k=0; k<cur_bytes.length; k++) {
+					if (block.bytemap.length > 0) {
+						var last_match = cur_matches[k];
+						var cur_match = cur_matches[k+1];
+						if (!last_match && cur_match) str_html += match_highlight_start;
+						if (last_match && !cur_match) str_html += match_highlight_end;
+					}
+					str_html += cur_bytes[k].toString(16).toUpperCase();;
+				}
+				str_html += " ";
+			}
+			str_html += "<br>";
+		}
+		str_html += "</td>";
+	}
+
+	// Adjust for tds
+	if (print_type != 0) {
+		str_html += "<td></td>";
+	}
+
+	return str_html;
+}
+
+// Instead of preload and postload, we combine two load into one
+// Blockload 0 means the bar before the first (0-th) block
+// Blockload i means the bar between the (i-1)-th and i-th block
+// Blockload N (N is blocks.length) means the bar after the last ((N-1)-th) block
+function getSkippedBytes(blocks, i) {
+	if (blocks == null || blocks.length <= 0) {
+		logDebugMessage("getSkippedBytes: blocks == null || blocks.length <= 0")
+		return 0;
+	}
+
+	if (i == 0) {
+		logDebugMessage("getSkippedBytes: return blocks[0].offset = ");
+		logDebugMessage(blocks[0].offset);
+		return blocks[0].offset;
+	} else if (i == blocks.length) {
+		logDebugMessage("getSkippedBytes: return get_total_size() - blocks[i-1].offset - blocks[i-1].data.length, i="+i);
+		logDebugMessage(get_total_size() - blocks[i-1].offset - blocks[i-1].data.length);
+		return get_total_size() - blocks[i-1].offset - blocks[i-1].data.length;
+	} else {
+		logDebugMessage("getSkippedBytes: blocks[i].offset - blocks[i-1].offset - blocks[i-1].data.length");
+		logDebugMessage(blocks[i].offset - blocks[i-1].offset - blocks[i-1].data.length);
+		return blocks[i].offset - blocks[i-1].offset - blocks[i-1].data.length;
+	}
+}
+
+function getReadableSize(sizeInBytes) {
+	var byteUnits = [' 字节', ' KB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+	for (var i=0; sizeInBytes > 1024; i++, sizeInBytes /= 1024) 
+		;
+	return sizeInBytes.toFixed(i==0?0:sizeInBytes<10?2:1) + byteUnits[i];
+};
+
+// i take from [0, N]
+// The bar looks like:
+//
+//  ↑↑ +【128】 【256】 【512】 【All】 bytes ↑↑  ...skipped 768 bytes...  ↓↓ +【All】 【512】 【256】 【128】  bytes ↓↓
+//
+function getBlockLoadHTML(blocks, i) {
+	var cur_html = "<td colspan = 4 style='text-align:center;'>";
+	var skipped = getSkippedBytes(blocks, i);
+
+	logDebugMessage("Start blockload html for " + get_blockload_id(i) + "skipped " + skipped + " bytes");
+
+	if (skipped <= 0) {
+		return cur_html;
+	}
+
+	// print the "↑↑ ... ↑↑" preload part
+	if (i < blocks.length) {
+		cur_html += "&#8593;&#8593; ";
+
+		// Print a series of size that we want user to expand 
+		for (var j = 1; j <= block_size_expand; j *= 2) {
+			var cur_expand = Math.min(block_size * j, skipped);
+			cur_html += ""
+				+ "<button class='w3-btn' onclick='onClickBlockExpandUp(the_blocks, 0x" + blocks[i].offset.toString(16) + "," + cur_expand + ");'> "
+				+ (cur_expand == skipped ? "全部" : cur_expand) + " </button>";
+
+			if (cur_expand == skipped) {
+				break;
+			}
+		}
+
+		cur_html += " &#8593;&#8593;";
+	}
+	logDebugMessage("Finish blockload html for &#8593; " + get_blockload_id(i));
+
+	// print the "skipped..."
+	cur_html += "&nbsp;&nbsp;&nbsp;...跳过 "+getReadableSize(skipped)+"...&nbsp;&nbsp;&nbsp;";
+
+	// print the "↓↓ ... ↓↓" postload part
+	if (i > 0) {
+		var tmp_html = "";
+		for (var j = 1; j <= block_size_expand; j *= 2) {
+			var cur_expand = Math.min(block_size * j, skipped);
+			tmp_html = ""
+				+ "<button class='w3-btn' onclick='onClickBlockExpandDown(the_blocks, 0x" + blocks[i-1].offset.toString(16) + "," + cur_expand + ");'>"
+				+ (cur_expand == skipped ? "全部" : cur_expand) + " </button>"
+				+ tmp_html;
+			if (cur_expand >= skipped) {
+				break;
+			}
+		}
+
+		cur_html += "&#8595;&#8595; "+tmp_html+" &#8595;&#8595;";
+	}
+	logDebugMessage("Finish blockload html for &#8595; " + get_blockload_id(i));
+
+	return cur_html + "</td>";
+}
+
+function onClickBlockExpandUp(blocks, offset, expand_size) {
+	var block_idx = get_index_from_offset(blocks, offset);
+	if (block_idx < 0 || block_idx >= blocks.length) {
+		return;
+	}
+
+	var new_offset = blocks[block_idx].offset - expand_size;
+	new_offset = Math.max(new_offset, 0);
+	if (block_idx > 0) {
+		new_offset = Math.max(new_offset, blocks[block_idx-1].offset + blocks[block_idx-1].data.length);
+	}
+	var new_length = blocks[block_idx].offset - new_offset;
+
+	// Read some data into current block
+	the_uri = $("#fileName").text();
+	var a_new_block = get_a_block(the_uri, new_offset, new_length);
+
+	// Debug
+	logDebugMessage(""
+		+ "new_offset = 0x" + new_offset.toString(16) + "<br>"
+		+ "new_length = " + new_length + "<br>"
+		+ "new_block.offset = 0x" + a_new_block.offset.toString(16) + "<br>"
+		+ "new_block.data = " + a_new_block.data + "<br>"
+		+ "new_block.data.length = " + a_new_block.data.length + "<br>"
+		+ "blocks.length = " + blocks.length + "<br>"
+		+ "blocks["+block_idx+"].data = " + blocks[block_idx].data + "<br>"
+		+ "blocks["+block_idx+"].data.length = " + blocks[block_idx].data.length + "<br>"
+	);
+
+	blocks.splice(block_idx, 0, a_new_block);
+
+	/*
+		block_idx-1: no use here
+				-- blockload_id is the old block's id, need to adjust to the new block's id --
+		block_idx  : the new block
+				-- no block load here since new and old are adjcent --
+		block_idx+1: the old block
+	*/
+	var theTable = document.getElementById("center-content");
+	var theBlockload = document.getElementById(get_blockload_id(block_idx+1));
+
+	// Insert the new block
+	var htmlBlock = theTable.insertRow(theBlockload.rowIndex);
+	htmlBlock.id = get_block_id(block_idx);
+	htmlBlock.innerHTML = getBlockHTML(blocks, block_idx, print_as);
+
+	// Adjust the blockload
+	if (getSkippedBytes(blocks, block_idx) > 0) {
+		theBlockload.id = get_blockload_id(block_idx);
+		theBlockload.innerHTML = getBlockLoadHTML(blocks, block_idx);
+	} else {
+		theTable.deleteRow(theBlockload.rowIndex - 1);
+	}
+}
+
+function onClickBlockExpandDown(blocks, offset, expand_size) {
+	var block_idx = get_index_from_offset(blocks, offset);
+	if (block_idx < 0 || block_idx >= blocks.length) {
+		return;
+	}
+
+	var new_offset = blocks[block_idx].offset + blocks[block_idx].data.length;
+	var new_length = expand_size;
+	if (block_idx < blocks.length - 1) {
+		new_length = Math.min(new_length, blocks[block_idx+1].offset - new_offset);
+	}
+
+	// Read some data into current block
+	the_uri = $("#fileName").text();
+	var a_new_block = get_a_block(the_uri, new_offset, new_length);
+
+	// Insert the new block after block_idx
+	blocks.splice(block_idx + 1, 0, a_new_block);
+
+	/*
+		block_idx  : the old block
+				-- no block load here since new and old are adjcent --
+		block_idx+1: the new block
+				-- blockload_id is the 3rd's id, just adjust content only --
+		block_idx+2: the 3rd block
+	*/
+	var theTable = document.getElementById("center-content");
+	var theBlockload = document.getElementById(get_blockload_id(block_idx+2));
+	logDebugMessage(get_blockload_id(block_idx+2));
+	logDebugMessage(theBlockload);
+
+	// Insert the new block
+	var htmlBlock = theTable.insertRow(theBlockload.rowIndex - 1);
+	htmlBlock.id = get_block_id(block_idx + 1);
+	htmlBlock.innerHTML = getBlockHTML(blocks, block_idx + 1, print_as);
+
+	// Adjust the blockload
+	if (getSkippedBytes(blocks, block_idx + 2) > 0) {
+		logDebugMessage("Adjust the blockload message of " + get_blockload_id(block_idx+2));
+		theBlockload.innerHTML = getBlockLoadHTML(blocks, block_idx+2);
+	} else {
+		theTable.deleteRow(theBlockload.rowIndex - 1);
+	}
+}
+
+function onRedrawContent(blocks) {
+	var cur_html = "";
+	var all_html = "";
+	var len = blocks.length;
+	// var debug_str = "blocks:" + len + "<br>";
+
+	for (var i = 0; i < len; i++) {
+		if (getSkippedBytes(blocks, i) > 0) {
+			all_html += "<tr id='" + get_blockload_id(i) + "'>" + getBlockLoadHTML(blocks, i) + "</tr>";
+		}
+
+		all_html += "<tr id='" + get_block_id(i) + "'>" + getBlockHTML(blocks, i, print_as) + "</tr>";
+	}
+
+	// Draw the last bar
+	if (getSkippedBytes(blocks, len)) {
+		all_html += "<tr id='" + get_blockload_id(len) + "'>" + getBlockLoadHTML(blocks, len) + "</tr>";
+	}
+
+
+	// document.getElementById("debug").innerHTML = debug_str;
+	document.getElementById("center-content").innerHTML = all_html;
+}
+
+function onSwitchPrintMode(print_type) {
+	if (print_as != print_type) {
+		print_as = print_type;
+		document.getElementById("thead-id").innerHTML = thead_array[print_as];
+		onRedrawContent(the_blocks);
+	}
+}
+
+var isDebug = 0;
+function onSwitchDebug() {
+	if (isDebug) {
+		document.getElementById("debug").style.display = "block";
+		isDebug = 0;
+	} else {
+		document.getElementById("debug").style.display = "none";
+		isDebug = 1;
+	}
+}
+</script>
+</head>
+<body>
+
+<p id="debug"></p>
+
+
+<style>
+#byte_content {
+	margin: 5px 0;
+	max-height: 100px;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+#byte_range { margin-top: 5px; }
+
+.span_link{ display:block; width:70px; height:90px; position:fixed; background:#BBB; opacity:0.7; line-height:80px; font-size:40px; cursor:pointer; text-align:center;}
+.span_link:hover{ background:#333; color:#DDD;}
+#span_prev{ left:0px; top:50%; margin-top:-40px;}
+#span_next{ right:0px; top:50%; margin-top:-40px;}
+</style>
+
+<!-- <input type="file" id="files" name="file" /> -->
+<!--
+<span class="readBytesButtons">
+   <button data-startbyte="0" data-endbyte="4">1-5</button>
+  <button data-startbyte="5" data-endbyte="14">6-15</button>
+  <button data-startbyte="6" data-endbyte="7">7-8</button>
+   <button>装载文件</button>
+</span>
+-->
+<h1 id="fileName" style="text-align: center;">{{ fileName }}</h1>
+<div id="byte_range"></div>
+<div id="byte_content"></div>
+<input type="text" name="the_matches" style="display: none;" id="the_matches" value="{{ matches }}"/>
+<input type="text" name="page_id" style="display: none;" id="page_id" value="1"/>
+<input type="text" name="page_num" style="display: none;" id="page_num" value="{{ pageNum }}"/>
+<input type="text" name="item_num" style="display: none;" id="item_num" value="{{ itemNum }}"/>
+<input type="text" name="node_ip" style="display: none;" id="node_ip" value="{{ nodeIP }}"/>
+<span id="span_prev" onclick="getPageContent('prev');" class="span_link">&lt;</span>
+<span id="span_next" onclick="getPageContent('next');" class="span_link">&gt;</span>
+<script>
+  function readBlob(opt_startByte, opt_stopByte) {
+
+	var files = document.getElementById('files').files;
+	if (!files.length) {
+	  alert('Please select a file!');
+	  return;
+	}
+
+	var file = files[0];
+	var start = parseInt(opt_startByte) || 0;
+	var stop = parseInt(opt_stopByte) || file.size - 1;
+
+	var reader = new FileReader();
+
+	// If we use onloadend, we need to check the readyState.
+	reader.onloadend = function(evt) {
+	  if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+		local_file = new Uint8Array(evt.target.result);
+
+		// Load the file content: from matches
+		the_blocks = createBlocksFromMatches(the_matches);
+		onRedrawContent(the_blocks);
+	  }
+	};
+
+	var blob = file.slice(start, stop + 1);
+	reader.readAsArrayBuffer(blob);
+  }
+  /*
+  document.querySelector('.readBytesButtons').addEventListener('click', function(evt) {
+	if (evt.target.tagName.toLowerCase() == 'button') {
+		// var startByte = evt.target.getAttribute('data-startbyte');
+		// var endByte = evt.target.getAttribute('data-endbyte');
+		the_blocks = createBlocksFromMatches(the_matches);
+		onRedrawContent(the_blocks);
+		// readBlob(startByte, endByte);
+	}
+  }, false);
+  */
+</script>
+<script type="text/javascript">
+	
+
+</script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		var page_id = parseInt($("#page_id").val());
+		the_matches = $("#the_matches").val();
+		var item_num = {{ itemNum }};
+		the_blocks = createBlocksFromMatches(the_matches, page_id, item_num);
+		// console.log(the_blocks);
+		onRedrawContent(the_blocks);
+	});
+</script>
+
+<!-- <button onclick='onSwitchDebug()'>Debug Message</button> -->
+
+
+<table id="tbl_fileContent" class="w3-table-all" style="width:100%; vertical-align: top;"> 
+<thead id="th_fileContent">
+<tr id="thead-id" style="font-weight: bold;"></tr>
+</thead>
+
+<tbody id='center-content' style="font-family: 'Lucida Console', monospace">
+	<script>
+		onSwitchPrintMode(print_binary);
+		onSwitchDebug();
+	</script>
+</tbody>
+</table>
+
+</body>
+</html>

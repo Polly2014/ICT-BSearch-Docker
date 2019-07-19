@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+</head>
+<body>
+	
+</body>
+<script type="text/javascript">
+function WebSocketSearch() {
+	if ("WebSocket" in window) {
+		// var wsUri = "ws://" + window.location.host + "/api_indexSearchStatus/";
+		// var wsUri = "ws://" + window.location.host + "/api_multiIndexSearchStatus/";
+		var wsUri = "ws://" + window.location.host + "/api_indexCreateStatus/";
+		var socket = new WebSocket(wsUri);
+		if (socket.readyState == WebSocket.OPEN) socket.onmessage();
+		socket.onopen = function (evt) {
+			var searchStringList = [
+				'1001010100101001010100101011',
+				'100101010010100101010010101111'
+			]
+			var payload = {
+				'type': 'distributedMultiIndexSearchStatus',
+				'relation': 'OR',
+				'searchStringList': JSON.stringify(searchStringList)
+			}
+			/*
+			var payload = {
+				"type": "distributedIndexSearchStatus",
+				"scale": 16,
+				// "searchString": "1100101010101010101010101010",
+				"searchString": "ABCDEF",
+			}
+			*/
+			var payload = {
+				'type': 'distributedIndexCreateStatus',
+			}
+			socket.send(JSON.stringify(payload));
+		};
+		socket.onmessage = function (evt) {
+			if (evt.data == 'over') {
+				console.log("### Over !!!");
+				socket.close();
+			} else {
+				// console.log(evt.data);
+				var format_result = $.parseJSON(evt.data);
+				console.log(format_result);
+			}
+		};
+		socket.onclose = function (evt) {
+			socket.close();
+		};
+	}else{
+		alert("您的浏览器不支持 WebSocket!");
+	}
+}
+
+$(document).ready(function(){
+	WebSocketSearch();
+})
+</script>
+</html>

@@ -1,0 +1,402 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bsearch.css' %}">
+
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fusioncharts/fusioncharts.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fusioncharts/themes/fusioncharts.theme.zune.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fusioncharts/sortable.js' %}"></script>
+
+    <!--换算-->
+    <script>
+        function transform(num) {
+            if (num < 1024) {
+                return num + " B";
+            } else if (num < 1024 * 1024) {
+                str = (num / 1024).toFixed(2);
+                return str + " KB";
+            } else if (num < 1024 * 1024 * 1024) {
+                str = (num / 1024 / 1024).toFixed(2);
+                return str + " MB";
+            } else if (num < 1024 * 1024 * 1024 * 1024) {
+                str = (num / 1024 / 1024 / 1024).toFixed(2);
+                return str + " GB";
+            } else if (num < 1024 * 1024 * 1024 * 1024 * 1024) {
+                str = (num / 1024 / 1024 / 1024 / 1024).toFixed(2);
+                return str + " TB";
+            }
+        }
+
+        function targetto(id) {
+            $("#table-search").html("");
+            $.each(CurrentJson[index].match_list, function (i, item) {
+                record = "<tr><td>" + item['length'] + "</td><td>" + item["offset_bit"] + "</td><td>" + item["offset"] + "</td></tr>"
+                $("#table-search").append(record);
+            });
+        }
+
+
+        /*----------------------
+            showDetailMatchInfo函数-参数说明：
+            name: full path and name
+            matches: [
+                {
+                    "offset": 25067362,
+                    "offset_bit": 7,
+                    "length": 20
+                },
+                {
+                    "offset": 25301856可能是电话号码，是否拨号?,
+                    "offset_bit": 7,
+                    "length": 20
+                }
+            ]
+        ----------------------*/
+function showDetailMatchInfo(index, pageNum){ // pageNum先恒定为1
+    console.log(CurrentJson);
+    var name = CurrentJson[index].name;
+    var matches = JSON.stringify(CurrentJson[index].match_list);
+    console.log(name, matches);
+    $.post("/getDetailMatchInfo/", {"name":name, "matches":matches, "pageNum":pageNum}, function(data){
+        /*---------------
+        data数据样例:
+        <tr class="tr_class">
+           <td class="td_class_offset">0x00112228</td>
+           <td class="td_class_hex">61 62 63 64 65 66 67 68</td>
+           <td class="td_class_ascii">abcdefgh</td>
+           <td class="td_class_bit">01100001 01100010 01100011 01100100  01100101 01100110 01100111 01101000</td>
+       </tr>
+       <tr class="tr_class">
+           <td class="td_class_offset">0x00112230</td>
+           <td class="td_class_hex">61 62 6<prefix>3 64 65 6<suffix>6 67 68</td>
+           <td class="td_class_ascii">ab<prefix>cdef<suffix>gh</td>
+           <td class="td_class_bit">01100001 01100010 0110<prefix>0011 01100100  01100101 011<suffix>00110 01100111 01101000</td>
+       </tr>
+        ---------------*/
+        console.log(data);
+        $("#table-modal").html("");
+        $("#table-modal").append(data);
+        
+    });
+}
+    </script>
+
+    <!--websocket-->
+    <script language="javascript" type="text/javascript">
+        var CurrentJson = null;  // 全局变量
+        var current_rate = 0.0;
+        function WebSocketSearch() {
+            if ("WebSocket" in window) {
+                var wsUri = "ws://" + window.location.host + "/indexSearch/";
+                socket = new WebSocket(wsUri);
+                socket.onmessage = function (evt) {
+                    if (evt.data == 'Over') {
+                        socket.close();
+                    } else {
+                        var format_result = $.parseJSON(evt.data);
+                        console.log(evt.data);
+                        var result_detail = format_result["detail"]; // 取出的detail
+                        var total_size = format_result["summary"].size_total_file;
+                        var searched_size = format_result["summary"].size_searched_file;
+                        var rate = format_result["summary"].rate;
+                        var num_file = format_result["summary"].num_file;
+                        CurrentJson = result_detail;
+
+                        // 上方显示的速率、大小、文件数目
+                        $("#status_text").html("");
+                        li_code = transform(rate) + '/s | ' + transform(searched_size) + ' | ' + num_file + ' files';
+                        $("#status_text").append(li_code);
+
+                        // 总进度条
+                        // 判断当前进度
+                        var progress = (100 * searched_size * 1.0 / total_size).toFixed(2); // 进度
+                        console.log(progress + '|' + current_rate);
+                        if (current_rate < 25) {
+                            if (progress >= 25) {
+                                current_rate = 25;
+                            } else {
+                                current_rate += 0.15;
+                            }
+                        } else if (current_rate < 50) {
+                            if (progress >= 50) {
+                                current_rate = 50;
+                            } else if (progress < 25) {
+                                current_rate = current_rate;
+                            } else {
+                                current_rate += 0.15;
+                            }
+                        } else if (current_rate < 75) {
+                            if (progress >= 75) {
+                                current_rate = 75;
+                            } else if (progress < 50) {
+                                current_rate = current_rate;
+                            } else {
+                                current_rate += 0.15;
+                            }
+                        } else if (current_rate < 99) {
+                            if (progress >= 99) {
+                                current_rate = 99;
+                            } else if (progress < 75) {
+                                current_rate = current_rate;
+                            } else {
+                                current_rate += 0.15;
+                            }
+                        } else {
+                            current_rate = progress;
+                        }
+                        if (progress >= 100) {
+                            current_rate = progress;
+                            $("#chart-container0").html("<hr width='90%'>");
+                        }
+
+                        var progress_tmp = getChartFromId('myHLED0');
+                        var current_data = progress_tmp.getChartData("json");
+                        current_data.value = current_rate / 2;
+                        progress_tmp.setChartData(current_data, "json");
+
+                        // 表格
+                        // 填写下方的表格
+                        // 模态框部分
+                        $("#table_info").html('');
+                        $.each(result_detail, function (index, item) {
+                            var li_code = "<tr data-toggle='modal'  data-target='#TableModal' onclick='showDetailMatchInfo(" + index + ", 1)'><td class='text-left'>" + item["name"] + "</td><td class='text-right'>" + transform(item["file_size"]) + "</td><td class='text-right'>" + item["num_match"] + "</td><td class='text-right'>" + item["MPM"] + "</td></tr>";
+                            $("#table_info").append(li_code);
+                        });
+                        $("#table_foot").html("");
+                        var li_code = "<tr><td class='text-left'>TOTAL</td><td class='text-right'>" + transform(format_result["summary"].file_size) + "</td><td class='text-right'>" + format_result["summary"].num_match + "</td><td class='text-right'>" + format_result["summary"].MPM + "</td></tr>";
+                        $("#table_foot").append(li_code);
+                    }
+                }
+                if (socket.readyState == WebSocket.OPEN) socket.onmessage();
+                socket.onopen = function (evt) {
+                    var content = {
+                        "type": "searchInformation",
+                        "searchString": $("#searchString").text(),
+                        //"searchString":{{ searchString }},
+                    }
+                    socket.send(JSON.stringify(content));
+                };
+                socket.onclose = function (evt) {
+                    socket.close();
+                };
+            } else {
+                // 浏览器不支持 WebSocket
+                alert("您的浏览器不支持 WebSocket!");
+            }
+        }
+
+        $(document).ready(function () {
+            WebSocketSearch();
+        });
+    </script>
+
+    <script type="text/javascript">
+        FusionCharts.ready(function () {
+            var chargePercent = 0,
+                flag = 0,
+                count = 0,
+                chart = new FusionCharts({
+                    type: 'hled',
+                    showBorder: '0',
+                    renderAt: 'chart-container0',
+                    id: "myHLED0",
+                    width: '90%',
+                    height: '8',
+                    dataFormat: 'json',
+                    bgImageAlpha: "0",
+                    dataSource: {
+                        "chart": {
+                            "lowerLimit": "0",
+                            "upperLimit": "50", //TODO: should be the total file size
+                            "useSameFillColor": "1",
+                            "showGaugeBorder": "1",
+                            "chartTopMargin": "0",
+                            "chartBottomMargin": "0",
+                            "chartLeftMargin": "0",
+                            "chartRightMargin": "0",
+                            //Add hover effect
+                            "showhovereffect": "1",
+
+                            "theme": "fint",
+                            "showValue": "0",
+                            "showTickMarks": "0",
+                            "ledSize": "5",
+                            "ledGap": "0",
+                            "animation": "0",
+                        },
+                        "annotations": {
+
+                            "groups": [
+
+                                {
+                                    //Each group needs a unique ID
+                                    "id": "remainingTime0",
+                                    "showbelow": "0",
+                                    "items": [
+
+                                        {
+                                            "id": "remainingTxt0",
+                                            //Polygon item 
+                                            "type": "text",
+                                            "text": "",
+                                            "fontColor": "#FFFFFF",
+                                            "fontSize": "18",
+                                            "bold": "1",
+                                            "x": "$gaugeCenterX",
+                                            "y": "$gaugeCenterY",
+                                        }
+                                    ]
+                                }
+                            ]
+
+                        },
+
+                        "colorRange": {
+                            "color": [ //TODO: set those minValue and maxValue according to the actual total file size
+                                {
+                                    "minValue": "0",
+                                    "maxValue": "2",
+                                    "code": "#999999"
+                                },
+                                {
+                                    "minValue": "2",
+                                    "maxValue": "10",
+                                    "code": "#FF2020",
+                                },
+                                {
+                                    "minValue": "10",
+                                    "maxValue": "20",
+                                    "code": "#C04a00"
+                                },
+                                {
+                                    "minValue": "20",
+                                    "maxValue": "35",
+                                    "code": "#E09900"
+                                },
+                                {
+                                    "minValue": "35",
+                                    "maxValue": "45",
+                                    "code": "#6baa01"
+                                },
+                                {
+                                    "minValue": "45",
+                                    "maxValue": "50", //TODO: this is the total file size to be searched, other values scale accordingly
+                                    "code": "#30ca30"
+                                }
+                            ]
+                        },
+                        "value": ""
+                    },
+                })
+                    .render();
+        });
+    </script>
+</head>
+
+<body>
+    <!-- This is the header search bar of the result page -->
+    <!-- <div id="chart-container">Fusion Chart will render here</div>
+<hr>
+-->
+    <h1>
+        <font color="red"><b>b</b></font>
+        <font color="white" style="margin-left:-25px;">search <span id="searchString" style="color:#4DC3FA;">{{ searchString }}</span></font>
+    </h1>
+
+    <h2 style="font-size: 35px;" id="status_text"> 0 Gbps | 0 GB | 0 files </h2>
+    <div id="chart-container0" align="center">Fusion Chart will render here</div>
+
+    <table class="sortable container">
+        <thead>
+            <tr>
+                <th class="text-left" style="font-size: 25px;" width="65%">目录</th>
+                <th class="text-right" style="font-size: 25px;" width="20%">大小</th>
+                <th class="text-right" style="font-size: 25px;" width="15%">匹配数</th>
+                <th class="text-right" style="font-size: 25px;" width="10%">MPM</th>
+            </tr>
+        </thead>
+        <tbody class="table-hover" id="table_info" style="font-size:20px;">
+            <!--<tr id="row1">
+<td class="text-left">/home/polly/test2/Java/jdk-8u101-windows-x64.exe</td>
+<td class="text-right">127 MB</td>
+<td class="text-right">342</td>
+<td class="text-right">2.5</td>
+</tr>
+<tr id="row2">
+<td class="text-left">/home/polly/test/openstack-2.1.4</td>
+<td class="text-right">1,152 MB</td>
+<td class="text-right">2,000</td>
+<td class="text-right">1.81</td>
+</tr>
+<tr id="row3">
+<td class="text-left">/home/polly/downloads/harrypotter-1.mpg</td>
+<td class="text-right">2,327 MB</td>
+<td class="text-right">986</td>
+<td class="text-right">0.76</td>
+</tr>
+<tr id="row4">
+<td class="text-left">/c/windows/system64/unknown.dat</td>
+<td class="text-right">98 MB</td>
+<td class="text-right">111</td>
+<td class="text-right">1.5</td>
+</tr>-->
+        </tbody>
+        <tfoot id="table_foot">
+            <!--<tr>
+<td class="text-left">TOTAL</td>
+<td class="text-right">3,650 MB</td>
+<td class="text-right">4,440</td>
+<td class="text-right">1.13</td>
+</tr>-->
+        </tfoot>
+
+
+</table>
+
+
+</body>
+<!--模态框-->
+
+<div class="modal fade" style="padding-top:10%;" id="TableModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" style="width: 100%">
+        <div class="modal-content" style="width:1000px; margin:0 auto;">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+                            &times;
+                        </button>
+                <h4 class="modal-title" id="myModalLabel">
+                    详细信息
+                </h4>
+            </div>
+            <div class="modal-body" style="width: 100%; ">
+                <!--<table class="table table-bordered table-hover" style="font-size: 11px;">-->
+                <table class="" style="font-size: 11px; ">
+                    <thead>
+                        <tr>
+                            <th class="text-left" width="10%" style="font-size: 12px; text-align: center">偏移量</th>
+                            <th class="text-left" width="10%" style="font-size: 12px; text-align: center">偏移量(HEX)</th>
+                            <th class="text-left" width="20%" style="font-size: 12px; text-align: center">十六进制</th>
+                            <th class="text-left" width="10%" style="font-size: 12px; text-align: center">ASCII</th>
+                            <th class="text-left" width="50%" style="font-size: 12px; text-align: center">二进制</th>
+                        </tr>
+                    </thead>
+                    <tbody class="table-hover" id="table-modal" style="font-size:7px;">
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+</html>

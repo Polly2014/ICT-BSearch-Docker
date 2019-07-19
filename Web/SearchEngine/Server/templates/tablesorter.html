@@ -1,0 +1,185 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>jquery.tablesorter</title>
+    <script language="JavaScript" type="text/javascript" src="js/jquery.min.js"></script>
+    <script language="JavaScript" type="text/javascript" src="js/jquery.tablesorter.min.js"></script>
+                <link rel="stylesheet" href="css/bootstrap.min.css">
+        <script src="js/bootstrap.min.js"></script>
+</head>
+<!--designed by libihong-->
+<style type="text/css">
+    thead {
+        background: #555555;
+        color: #ff0000;
+    }
+    
+    th.headerSortDown {
+        color: #00ff00;
+    }
+    
+    th.headerSortUp {
+        color: #0000ff;
+    }
+</style>
+
+<body>
+    <table id="mytable" border="1" style="width: 800px; text-align: center">
+        <thead>
+            <tr>
+                <th>编号</th>
+                <th>姓名</th>
+                <th>性别</th>
+                <th>年龄</th>
+                <th>年龄等级</th>
+                <th>地址</th>
+                <th>电话</th>
+                <th>流量</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>2016.12.32 12:23:23</td>
+                <td>a sdf</td>
+                <td>男</td>
+                <td>22</td>
+                <td>青</td>
+                <td>啊北京</td>
+                <td>010123456</td>
+                <td>2MB</td>
+            </tr>
+            <tr>
+                <td>2016.12.32 09:32:12</td>
+                <td>d wr</td>
+                <td>男</td>
+                <td>10</td>
+                <td>少</td>
+                <td>不广州</td>
+                <td>020123456</td>
+                <td>20GB</td>
+            </tr>
+            <tr>
+                <td>2015.01.03 12:23:21</td>
+                <td>e vcv</td>
+                <td>女</td>
+                <td>35</td>
+                <td>中</td>
+                <td>才上海</td>
+                <td>021123456</td>
+                <td>12KB</td>
+            </tr>
+            <tr>
+                <td>2013.01.01 24:21:21</td>
+                <td>b sdewr</td>
+                <td>女</td>
+                <td>67</td>
+                <td>老</td>
+                <td>的天津</td>
+                <td>022123456</td>
+                <td>13KB</td>
+            </tr>
+            <tr>
+                <td>2016.09.09 21:21:11</td>
+                <td>c sdfd</td>
+                <td>男</td>
+                <td>40</td>
+                <td>中</td>
+                <td>额重庆</td>
+                <td>023123456</td>
+                <td>1.56MB</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script type="text/javascript">
+    $.tablesorter.addParser({
+        id: "date",
+        is: function (s) {
+            return false;
+        },
+        format: function (s) {
+            var unit = (s.substring(s.length - 2, s.length));
+            var number = parseInt(s.substring(0, s.length - 2));
+            if (unit == "B") {
+                return number/1024;
+            } else if(unit == "KB"){
+                return number;
+            }else if (unit == "MB") {
+                return number * 1024;
+            } else if (unit == "GB") {
+                return number * 1024 * 1024;
+            }
+        },
+        type: "numeric"
+    });
+
+    $.tablesorter.addParser({
+        id: "time",
+        is: function (s) {
+            return false;
+        },
+        format: function (s) {
+            var unit = (s.substring(s.length - 2, s.length));
+            var number = parseInt(s.substring(0, s.length - 2));
+            if (unit == "B") {
+                return number/1024;
+            } else if(unit == "KB"){
+                return number;
+            }else if (unit == "MB") {
+                return number * 1024;
+            } else if (unit == "GB") {
+                return number * 1024 * 1024;
+            }
+        },
+        type: "numeric"
+    });
+    
+    $.tablesorter.addParser({
+        id: "size",
+        is: function (s) {
+            return false;
+        },
+        format: function (s) {
+            var unit = (s.substring(s.length - 2, s.length));
+            var number = parseInt(s.substring(0, s.length - 2));
+            if (unit == "B") {
+                return number/1024;
+            } else if(unit == "KB"){
+                return number;
+            }else if (unit == "MB") {
+                return number * 1024;
+            } else if (unit == "GB") {
+                return number * 1024 * 1024;
+            }
+        },
+        type: "numeric"
+    });
+
+    $.tablesorter.addParser({
+        id: "speed",
+        is: function (s) {
+            return false;
+        },
+        format: function (s) {
+            var unit = (s.substring(s.length - 4, s.length));
+            var number = parseInt(s.substring(0, s.length - 4));
+            if (unit == "B/s"){
+                return number/1024;
+            } else if (unit == "KB/s") {
+                return number;
+            } else if (unit == "MB/s") {
+                return number * 1024;
+            } else if (unit == "GB/s") {
+                return number * 1024 * 1024;
+            }
+        },
+        type: "numeric"
+    });
+
+    $("#mytable").tablesorter({ headers: { 4: { sorter: "grade" }, 5: { sorter: false }, 7: {sorter: "size"} } });  // 4.5 两列不排序
+
+
+    </script>
+</body>
+<html>

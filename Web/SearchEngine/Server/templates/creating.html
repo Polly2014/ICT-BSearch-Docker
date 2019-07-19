@@ -1,0 +1,831 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel='icon' type='image/png' href="{% static 'images/icons/bsearch.ico' %}">
+    <!--jquery库-->
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <!--自定义库-->
+    <link rel="stylesheet" href="{% static 'css/frame.css' %}">
+</head>
+<!--导入futioncharts-->
+<script type="text/javascript" src="{% static 'js/sortable.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/fusioncharts.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/fusioncharts.charts.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/themes/fusioncharts.theme.fint.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/themes/fusioncharts.theme.zune.js' %}"></script>
+<link href="{% static 'css/datepicker3.css' %}" rel="stylesheet">
+<link href="{% static 'css/styles.css' %}" rel="stylesheet">
+<!--<link href="{% static 'css/mycss.css' %}" rel="stylesheet">-->
+<style>
+tr:hover{cursor:pointer}
+#browser_head{}
+#browser_content{margin-top:10px;}
+#ul_browser{width:100%; height:auto; border:1px solid #CCC; list-style:none; padding:0;}
+#ul_browser li{ width:100%; cursor:pointer; border:1px solid transparent; text-align:left; padding-left:22px; background-image:url({% static "images/directory-small.png" %}); background-size:auto 100%; background-repeat:no-repeat;}
+#ul_browser li:hover{ cursor:pointer; border:1px solid #66a7e8; background:#e5f3fb; background-image:url({% static "images/directory-small.png" %}); background-size:auto 100%; background-repeat:no-repeat;}
+.highlight{ border:1px solid #66a7e8; background:#d1e8ff; }
+</style>
+<script>
+    function transform(num) {
+        if (num < 1024) {
+            return num + "B";
+        } else if (num < 1024 * 1024) {
+            str = (num / 1024).toFixed(2);
+            return str + "KB";
+        } else if (num < 1024 * 1024 * 1024) {
+            str = (num / 1024 / 1024).toFixed(2);
+            return str + "MB";
+        } else if (num < 1024 * 1024 * 1024 * 1024) {
+            str = (num / 1024 / 1024 / 1024).toFixed(2);
+            return str + "GB";
+        } else if (num < 1024 * 1024 * 1024 * 1024 * 1024) {
+            str = (num / 1024 / 1024 / 1024 / 1024).toFixed(2);
+            return str + "TB";
+        }
+    }
+</script>
+<!--sigmoid函数-->
+<script>
+    function sigmoid(size) {
+        var e = 2.718281828459;
+        var x = size / 1024 / 1024 / 1024;
+        if (x < 1) {
+            x = 0;
+        } else {
+            x = -0.1 * x;
+        }
+        var width = (1 / (1 + Math.exp(x))) * 160 - 60;
+        return width;
+    }
+
+</script>
+<!--websocket-->
+<script language="javascript" type="text/javascript">
+    function compare(progress, current_rate, speed) {
+        if (current_rate < 25) {
+            if (progress >= 25) {
+                current_rate = 25;
+            } else {
+                current_rate += speed;
+            }
+        } else if (current_rate < 50) {
+            if (progress >= 50) {
+                current_rate = 50;
+            } else if (progress < 25) {
+                current_rate = current_rate;
+            } else {
+                current_rate += speed;
+            }
+        } else if (current_rate < 75) {
+            if (progress >= 75) {
+                current_rate = 75;
+            } else if (progress < 50) {
+                current_rate = current_rate;
+            } else {
+                current_rate += speed;
+            }
+        } else if (current_rate < 99) {
+            if (progress >= 99) {
+                current_rate = 99;
+            } else if (progress < 75) {
+                current_rate = current_rate;
+            } else {
+                current_rate += speed;
+            }
+        } else {
+            current_rate = progress;
+        }
+        if (progress >= 100) {
+            current_rate = progress;
+        }
+        return current_rate;
+    }
+    function compare2(progress, current_rate, speed) {
+        if (current_rate < 50) {
+            if (progress >= 50) {
+                current_rate = 50;
+            } else {
+                current_rate += speed;
+            }
+        } else if (current_rate < 90) {
+            if (progress >= 90) {
+                current_rate = 90;
+            } else if (progress < 50) {
+                current_rate = current_rate;
+            } else {
+                current_rate += speed;
+            }
+        } else if (current_rate < 99) {
+            if (progress >= 99) {
+                current_rate = 99;
+            } else if (progress < 90) {
+                current_rate = current_rate;
+            } else {
+                current_rate += speed;
+            }
+        } else {
+            current_rate = progress;
+        }
+        if (progress >= 100) {
+            current_rate = progress;
+        }
+        return current_rate;
+    }
+
+    var CreatingTable = null; // 定义全局表
+    function WebSocketSearch() {
+        if ("WebSocket" in window) {
+            var wsUri = "ws://" + window.location.host + "/indexCreate/";
+            var wsUri = "ws://" + window.location.host + "/api_indexCreateStatus/";
+            //var wsUri = 'ws://10.5.0.226:8000/indexCreate/';
+            //var wsUri ='ws://localhost:3368';
+            socket = new WebSocket(wsUri);
+
+            socket.onmessage = function (evt) {
+                if (evt.data == 'Over') {
+                    socket.close();
+                } else {
+                    console.log(evt.data);
+                    var format_result = $.parseJSON(evt.data);
+                    var result_summary = format_result["summary"];
+                    var result_detail = format_result["detail"].unfinished; // 取出未完成创建的detail信息
+
+                    // 总进度条
+                    var progress = (100 * result_summary["fileSizeCreated"] / result_summary["fileSizeTotal"]).toFixed(2);
+                    var progress_tmp = getChartFromId('ProgressBarAll');
+                    var current_data = progress_tmp.getChartData("json");  // 当前的rate
+                    var current_rate = compare(progress, 2 * current_data.value, 0.15);
+                    var strText = transform(result_summary["fileSizeCreated"]) + '/' + transform(result_summary["fileSizeTotal"]) + '(' + (1.0 * current_rate).toFixed(2) + '%)';//更新进度条的数据
+                    current_data.annotations.groups[0].items[0].text = strText;
+                    current_data.value = (current_rate / 2).toFixed(2);
+                    progress_tmp.setChartData(current_data, "json");
+
+                    // sparkline的动态图
+                    var sl_rate = getChartFromId('CreateSpeed');
+                    var current_data = sl_rate.getChartData("json"); // 获取当前的数据
+                    for (var i = 0; i < 29; i++) {
+                        current_data.dataset[0].data[i].value = current_data.dataset[0].data[i + 1].value
+                    }
+                    current_data.dataset[0].data[29].value = result_summary["rate"];
+                    sl_rate.setChartData(current_data, "json");
+
+                    // 修改下方的表格
+                    /* 
+                    全局变量CreatingTable记录上一次传来的信息，每次更新的时候依次匹配
+                    如果相同那么只更新页面对应位置的内容
+                    否则说明这一条记录已经完成，那么将这一行的内容重置为 alert($("#id").html(""));
+                    CreatingTable在最后保存为当前传来的数据
+                    table里面每一行 都以 行名+文件名 为id； 图表以 chart+文件名命名 
+                    */
+
+                    // 对CreatingTable和result_detail进行比较
+                    var i = 0, j = 0;
+                    if (result_detail.length == 0) {  // 全部完成了
+                        $("#ul_result").html("");
+                    }
+                    while (CreatingTable != null) { // 跳过第一次
+                        if (i >= CreatingTable.length) {
+                            break;
+                        }
+                        // 将文件名转为合理化的字符串
+                        var x = (CreatingTable[i].name);
+                        y = "";
+                        for (var str in x) {
+                            y += x[str].charCodeAt();
+                        }
+                        x = y;
+                        //？ 如果result_detail为空这里会报错！
+                        if (CreatingTable[i].name == result_detail[j].name) {  // 如果两个相同，说明这一条记录还未完成，则只更新记录
+                            $("#" + x + "Num").html(result_detail[j].fileNumCreated + "/" + result_detail[j].fileNumTotal);
+                            $("#" + x + "Size").html(transform(result_detail[j].fileSizeCreated) + "/" + transform(result_detail[j].fileSizeTotal));
+                            $("#" + x + "TimeWasted").html(result_detail[j].timeWasted);
+                            $("#" + x + "TimeFinished").html(result_detail[j].timeFinished);
+                            // 更新chart
+                            var sl_rate = getChartFromId(x + 'Chart');
+                            var current_data = sl_rate.getChartData("json"); // 获取当前的数据
+                            for (var z = 0; z < 29; z++) {
+                                current_data.dataset[0].data[z].value = current_data.dataset[0].data[z + 1].value;
+                            }
+                            current_data.dataset[0].data[29].value = result_detail[j].rate;
+                            sl_rate.setChartData(current_data, "json");
+
+
+                            // // 更新每个进度条
+                            var progress_rate = (100 * (result_detail[j].fileSizeCreated) / (result_detail[j].fileSizeTotal)).toFixed(2);
+                            var progress_tmp = getChartFromId(x + "BarChart");
+                            var current_data = progress_tmp.getChartData("json");
+                            var current_rate = compare2(progress_rate, 2 * current_data.value, 0.4);
+                            console.log(progress_rate, current_data.value, current_rate)
+                            var strText = (1.0 * current_rate).toFixed(2) + '%';
+                            current_data.annotations.groups[0].items[0].text = strText;
+                            current_data.value = (current_rate / 2).toFixed(2);
+                            progress_tmp.setChartData(current_data, "json");
+                            i = i + 1;
+                            j = j + 1;
+                        } else {  // 不一样，说明这一条记录已完成，将其归零; 并继续比较
+                            $("#" + x + 'Record').html("");
+                            i = i + 1;
+                        }
+                    }
+
+                    // 直接渲染result_detail剩下的部分
+                    $.each(result_detail, function (index, item) {
+                        if (index >= j) {
+                            var filename = item['name'];
+                            y = "";
+                            for (var str in filename) {
+                                y += filename[str].charCodeAt();
+                            }
+                            filename = y;
+                            // 创建rate图表
+                            //create_chart(filename+'RenderHere', filename+'Chart'); // 变量为渲染的地方和子图的id
+                            // if(index%2 == 0){
+                            //     var color = "#EBEBEB";
+                            // }else{
+                            //     var color = "#FFFFFF";
+                            // }
+                            FusionCharts.ready(function () {
+                                var stockPriceChart = new FusionCharts({
+                                    type: 'sparkline',
+                                    renderAt: filename + 'RenderHere',
+                                    width: "100%",
+                                    height: "40",
+                                    dataFormat: 'json',
+                                    id: filename + 'Chart',
+                                    dataSource: {
+                                        "chart": {
+                                            "theme": "fint",
+                                            "numberPrefix": " ",
+                                            "bgColor": "#FFFFFF", // for odd. for even, should be "#FFFFFF"
+
+                                            // Only show the latest anchor&number
+                                            "anchorRadius": "3",
+                                            "showHighAnchor": "0",
+                                            "showOpenAnchor": "0",
+                                            "showLowAnchor": "0",
+                                            "showopenvalue": "0",
+                                            "showHighLowValue": "0",
+
+                                            // Font and line
+                                            "linethickness": "2",
+                                            "baseFontSize": "18",
+                                            "chartBottomMargin": "0",
+                                            "animation": "0",
+                                        },
+                                        "dataset": [
+                                            {
+                                                "data": [
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                    { "value": "0" },
+                                                ]
+                                            }
+                                        ],
+                                    }
+                                })
+                                    .render();
+                            });
+
+                            FusionCharts.ready(function () {
+                                var chargePercent = 0,
+                                    flag = 0,
+                                    count = 0,
+                                    chart = new FusionCharts({
+                                        type: 'hled',
+                                        showBorder: '0',
+                                        renderAt: filename + "ProgressRate",
+                                        id: filename + "BarChart",
+                                        width: sigmoid(item["fileSizeTotal"]) + '%',  // 动态调整进度条长度
+                                        height: '40',
+                                        dataFormat: 'json',
+                                        bgImage: "../icons/bsearch-small.png",
+                                        bgImageAlpha: "0",
+                                        dataSource: {
+                                            "chart": {
+                                                "caption": "",//"0110100000011110101001011110....1110011111111111111", // TODO: set to the string user searched
+                                                "subcaption": "",//"耗时 21.32 秒，匹配到12个文件，289项记录", // TODO: update this when new data available 
+                                                "lowerLimit": "0",
+                                                "upperLimit": "50", //TODO: should be the total file size
+                                                "useSameFillColor": "1",
+                                                "showGaugeBorder": "0",
+                                                "canvasleftmargin": "0",
+                                                "chartTopMargin": "0",
+                                                "chartBottomMargin": "-3",
+                                                "chartLeftMargin": "0",
+                                                "chartRightMargin": "0",
+                                                "numberSuffix": " TB", //TODO: Set TB or GB or MB according to the actual file size
+                                                "captionFontSize": "24",
+                                                "subcaptionFontSize": "16",
+                                                //Add hover effect
+                                                "showhovereffect": "1",
+                                                "animation": "0",
+
+                                                "theme": "fint",
+                                                "showValue": "0",
+                                                "showTickMarks": "0",
+                                                "ledSize": "1",
+                                                "ledGap": "0"
+                                            },
+                                            "annotations": {
+                                                "groups": [
+                                                    {
+                                                        //Each group needs a unique ID
+                                                        "id": "remainingTime",
+                                                        "showbelow": "0",
+                                                        "items": [
+
+                                                            {
+                                                                "id": "remainingTxt2",
+                                                                //Polygon item 
+                                                                "type": "text",
+                                                                "text": "",
+                                                                "fontColor": "#FFFFFF",
+                                                                "fontSize": "18",
+                                                                "bold": "1",
+                                                                "x": "$gaugeCenterX",
+                                                                "y": "$gaugeCenterY",
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+
+                                            },
+
+                                            "colorRange": {
+                                                "color": [ //TODO: set those minValue and maxValue according to the actual total file size
+                                                    {
+                                                        "minValue": "0",
+                                                        "maxValue": "2",
+                                                        "code": "#999999"
+                                                    },
+                                                    {
+                                                        "minValue": "2",
+                                                        "maxValue": "10",
+                                                        "code": "#FF2020",
+                                                    },
+                                                    {
+                                                        "minValue": "10",
+                                                        "maxValue": "20",
+                                                        "code": "#C04a00"
+                                                    },
+                                                    {
+                                                        "minValue": "20",
+                                                        "maxValue": "35",
+                                                        "code": "#E09900"
+                                                    },
+                                                    {
+                                                        "minValue": "35",
+                                                        "maxValue": "45",
+                                                        "code": "#6baa01"
+                                                    },
+                                                    {
+                                                        "minValue": "45",
+                                                        "maxValue": "50", //TODO: this is the total file size to be searched, other values scale accordingly
+                                                        "code": "#30ca30"
+                                                    },
+                                                ]
+                                            },
+                                            "value": "0"
+                                        },
+
+                                    })
+                                        .render();
+                            });
+                            var progress_rate = (item['fileSizeCreated'] / item['fileSizeTotal']).toFixed(2);  // 进度
+                            var li_code = "<tr id=" + filename + "Record><td class='text-left' >" + item["name"] + "</td><td class='text-left' id=" + filename + "Num>" + item["fileNumCreated"] + "/" + item["fileNumTotal"] + "</td><td class='text-right' id=" + filename + "Size>" + transform(item["fileSizeCreated"]) + "/" + transform(item["fileSizeTotal"]) + "</td><td class='class='text-left'>" + item["timeCreated"] + "</td><td class='class='text-left' id=" + filename + "TimeWasted>" + item["timeWasted"] + "</td><td class='text-left'><div id=" + filename + "RenderHere></div></td><td class='text-left'><div id=" + filename + "ProgressRate></div></td></tr>";
+                            $("#ul_result").append(li_code);
+                        }
+                    });
+                    CreatingTable = result_detail;
+                }
+            }
+
+            if (socket.readyState == WebSocket.OPEN) socket.onmessage();
+            socket.onopen = function (evt) {
+                // socket.send("createInformation");
+                socket.send("distributedIndexCreateStatus");
+            };
+            socket.onclose = function (evt) {
+                socket.close();
+            };
+        } else {
+            // 浏览器不支持 WebSocket
+            alert("您的浏览器不支持 WebSocket!");
+        }
+    }
+
+    $(document).ready(function () {
+        WebSocketSearch();
+    });
+
+</script>
+
+<!--新进度条-->
+<script type="text/javascript">
+    FusionCharts.ready(function () {
+        var chargePercent = 0,
+            flag = 0,
+            count = 0,
+            chart = new FusionCharts({
+                type: 'hled',
+                showBorder: '0',
+                renderAt: 'myHeld',
+                id: "ProgressBarAll",
+                width: '100%',
+                height: '60',
+                dataFormat: 'json',
+                bgImage: "../icons/bsearch-small.png",
+                bgImageAlpha: "0",
+                dataSource: {
+                    "chart": {
+                        "caption": "",//"0110100000011110101001011110....1110011111111111111", // TODO: set to the string user searched
+                        "subcaption": "",//"耗时 21.32 秒，匹配到12个文件，289项记录", // TODO: update this when new data available 
+                        "lowerLimit": "0",
+                        "upperLimit": "50", //TODO: should be the total file size
+                        "useSameFillColor": "1",
+                        "showGaugeBorder": "0",
+                        "canvasleftmargin": "0",
+                        "chartTopMargin": "0",
+                        "chartBottomMargin": "-3",
+                        "chartLeftMargin": "0",
+                        "chartRightMargin": "0",
+                        "numberSuffix": " TB", //TODO: Set TB or GB or MB according to the actual file size
+                        "captionFontSize": "24",
+                        "subcaptionFontSize": "16",
+                        //Add hover effect
+                        "showhovereffect": "0", //总进度条不需要hover效果
+                        "chartTopMargin": "30",
+                        "animation": "0",
+
+                        "theme": "fint",
+                        "showValue": "0",
+                        "showTickMarks": "0",
+                        "ledSize": "1",
+                        "ledGap": "0"
+                    },
+                    "annotations": {
+                        "groups": [
+                            {
+                                //Each group needs a unique ID
+                                "id": "remainingTime",
+                                "showbelow": "0",
+                                "items": [
+
+                                    {
+                                        "id": "remainingTxt2",
+                                        //Polygon item 
+                                        "type": "text",
+                                        "text": "",
+                                        "fontColor": "#FFFFFF",
+                                        "fontSize": "18",
+                                        "bold": "1",
+                                        "x": "$gaugeCenterX",
+                                        "y": "$gaugeCenterY",
+                                    }
+                                ]
+                            }
+                        ]
+
+                    },
+
+                    "colorRange": {
+                        "color": [ //TODO: set those minValue and maxValue according to the actual total file size
+                            {
+                                "minValue": "0",
+                                "maxValue": "2",
+                                "code": "#999999"
+                            },
+                            {
+                                "minValue": "2",
+                                "maxValue": "10",
+                                "code": "#FF2020",
+                            },
+                            {
+                                "minValue": "10",
+                                "maxValue": "20",
+                                "code": "#C04a00"
+                            },
+                            {
+                                "minValue": "20",
+                                "maxValue": "35",
+                                "code": "#E09900"
+                            },
+                            {
+                                "minValue": "35",
+                                "maxValue": "45",
+                                "code": "#6baa01"
+                            },
+                            {
+                                "minValue": "45",
+                                "maxValue": "50", //TODO: this is the total file size to be searched, other values scale accordingly
+                                "code": "#30ca30"
+                            }
+                        ]
+                    },
+                    "value": "0"
+                },
+
+            })
+                .render();
+    });
+
+</script>
+<!-- 修改图标 -->
+<!--sparkline总图-->
+<script>
+    FusionCharts.ready(function () {
+        //var width_chart = document.getElementById("chart2").offsetWidth-30;
+        // var height_chart = document.getElementById("chart2").offsetHeight-50;
+        stockPriceChart = new FusionCharts({
+            type: 'sparkline',
+            id: 'CreateSpeed',
+            renderAt: 'chart-2',
+            width: "100%",
+            height: "95",
+            dataFormat: 'json',
+            dataSource: {
+                "chart": {
+                    "theme": "fint",
+                    "numberPrefix": " ",
+                    "bgColor": "#FFFFFF", // for odd. for even, should be "#FFFFFF"
+
+                    // Only show the latest anchor&number
+                    "anchorRadius": "3",
+                    "showHighAnchor": "0",
+                    "showOpenAnchor": "0",
+                    "showLowAnchor": "0",
+                    "showopenvalue": "0",
+                    "showHighLowValue": "0",
+
+                    // Font and line
+                    "linethickness": "2",
+                    "baseFontSize": "18",
+                    "chartBottomMargin": "0",
+                    "animation": "0",
+                },
+                "dataset": [
+                    {
+                        "data": [
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" },
+                            { "value": "0" }
+                        ]
+                    }
+                ]
+            }
+        })
+            .render();
+    });
+</script>
+
+<script type="text/javascript">
+function selectItem(which){
+    $(which).parent().children("li").removeClass("highlight");
+    $(which).addClass("highlight");
+    console.log($(which).html());
+    if($(which).html()==".."){
+        $("#btn_confirm").attr("disabled", true);
+    }else{
+        $("#btn_confirm").attr("disabled", false);
+    }
+}
+
+function getTotalPath(){
+    var current_path = $("#currentPath").html();
+    var current_dir = $("li.highlight").html();
+    totalPath = current_path+'/'+current_dir;
+
+    console.log(totalPath);
+    $("#directory").val(totalPath);
+    $("#form_addition").submit();
+}
+
+function showDirectoryInfo(currentPath=""){
+    $.post("/api_getDirectoryBrowserInfo/", {"currentPath":currentPath}, function(data){
+        console.log(data);
+        var browser_info = $.parseJSON(data);
+        var current_path = browser_info["dir_current"];
+        var directory_list = browser_info["dir_list"];
+
+        $("#currentPath").html(current_path);
+        $("#ul_browser").html("");
+        $.each(directory_list, function(index,item){
+            var li_code = '<li onclick="selectItem(this);" ondblclick="showDirectoryInfo(\''+item["link"]+'\');">'+item["name"]+'</li>';
+            $("#ul_browser").append(li_code);
+        });
+    });
+};
+
+$(document).ready(function(){
+    showDirectoryInfo();
+});
+</script>
+<body>
+    <!--导航栏部分-->
+    <div>
+        <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar-collapse">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                    <image src="{% static 'images/bsearch-white.png' %}">
+                    <ul class="user-menu">
+                        <li class="dropdown pull-right">
+                            <a href="/dashboard/created" style="padding-right: 30px;">已经创建</a>
+                            <a href="#" style="padding-right: 10px;" data-toggle="modal" data-target="#AddModal">添加索引</a>
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="padding-right: 30px;">
+                                <svg class="glyph stroked male-user">
+                                    <use xlink:href="#stroked-male-user"></use>
+                                </svg> 用户 <span class="caret"></span></a>
+                            <ul class="dropdown-menu" role="menu">
+                                <!--
+                                <li>
+                                    <a href="#">
+                                        <svg class="glyph stroked male-user">
+                                            <use xlink:href="#stroked-male-user"></use>
+                                        </svg> 设置</a>
+                                </li>
+                                -->
+                                <li>
+                                    <a href="/logout/">
+                                        <svg class="glyph stroked gear">
+                                            <use xlink:href="#stroked-gear"></use>
+                                        </svg> 退出</a>
+                                </li>
+                                <li>
+                                    <a href="#">
+                                        <svg class="glyph stroked cancel">
+                                            <use xlink:href="#stroked-cancel"></use>
+                                        </svg> 帮助</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <!-- /.container-fluid -->
+        </nav>
+
+        <!-- 模态框（Modal） -->
+        <div class="modal fade" style="padding-top: 10%" id="AddModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+                            &times;
+                        </button>
+                        <h4 class="modal-title" id="myModalLabel">
+                            添加目录
+                        </h4>
+                    </div>
+                    <form id="form_addition" name="form_addition" action="/directoryAddition/" method="POST">
+                        <div class="modal-body">
+                            <div id="browser_head">
+                                <!-- <span style="width: 20%;">当前主机：</span>
+                                <select name="currentHost" id="currentHost">
+                                    <option value="192.168.0.2">192.168.0.2</option>
+                                    <option value="192.168.0.3">192.168.0.3</option>
+                                </select> -->
+                                <span style="width: 20%;">当前目录：</span>
+                                <span id="currentPath" style="width:80%;"></span>
+                            </div>
+                            <div id="browser_content">
+                                <center>
+                                <ul id="ul_browser">
+                                    <li>a</li>
+                                    <li>b</li>
+                                </ul>
+                                </center>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <input type="hidden" style="width: 80%;font-size: inherit" name="directory" id="directory" />
+                            <button id="btn_confirm" onclick="getTotalPath();" disabled="disabled" type="button" class="btn btn-primary">
+                            添加
+                        </button>
+                        </div>
+                    </form>
+                </div>
+                <!-- /.modal-content -->
+            </div>
+            <!-- /.modal -->
+    </div>
+    <div class="page-content-wrapper">
+        <!--图表部分-->
+        <div class="row">
+            <div class="col-md-6 col-sm-12">
+                <div class="portlet-left light bordered" id="chart-1">
+                    <div class="portlet-title">
+                        <div class="caption">创建总进度</div>
+                    </div>
+                    <div class="portlet-body" style="height: 105px;">
+                        <div id="myHeld">FusionCharts will render here</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-sm-12">
+                <div class="portlet-right light bordered" id="chart2">
+                    <div class="portlet-title">
+                        <div class="caption">创建速度</div>
+                    </div>
+                    <div class="portlet-body" style="height: 105px;">
+                        <div id="chart-2">FusionCharts will render here</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--表格部分-->
+        <div>
+            <div class="portlet-mid light bordered">
+                <div class="portlet-title">
+                    <div class="caption">表格</div>
+                </div>
+                <div class="portlet-body">
+                    <table class="sortable table table-bordered table-hover" align="center" style="width:100%">
+                        <caption>创建信息表格</caption>
+                        <thead>
+                            <tr>
+                                <th class="text-left" width="16%" onselectstart="return false;">目录</th>
+                                <th class="text-left" width="9%" onselectstart="return false;">文件数</th>
+                                <th class="text-left" width="9%" onselectstart="return false;">文件大小</th>
+                                <th class="text-left" width="15%" onselectstart="return false;">创建时间</th>
+                                <th class="text-left" width="8%" onselectstart="return false;">已用时间</th>
+                                <th class="text-left" width="20%" onselectstart="return false;">速度</th>
+                                <th class="text-left" width="20%" onselectstart="return false;">进度</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-hover" id="ul_result">
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

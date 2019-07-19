@@ -1,0 +1,135 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<!--历史搜索页面主页-->
+<html>
+
+<head>
+    <meta charset="utf-8">
+  <!--jquery库-->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/sortable.js' %}"></script>
+        <!--自定义库-->
+        <link rel="stylesheet" href="{% static 'css/frame.css' %}">
+        <!--<link rel='stylesheet' href="{% static 'css/mycss.css' %}">-->
+        <link href="{% static 'css/datepicker3.css' %}" rel="stylesheet">
+        <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+</head>
+<style>
+tr:hover{cursor:pointer}
+</style>
+<!--换算-->
+<script>
+function transform(num){
+    if(num < 1024){
+        return num+"B";
+    }else if(num < 1024*1024){
+        str = (num/1024).toFixed(2);
+        return str+"KB";
+    }else if(num < 1024*1024*1024){
+        str = (num/1024/1024).toFixed(2);
+        return str+"MB";
+    }else if(num < 1024*1024*1024*1024){
+        str = (num/1024/1024/1024).toFixed(2);
+        return str+"GB";
+    }else if(num < 1024*1024*1024*1024*1024){
+        str = (num/1024/1024/1024/1024).toFixed(2);
+        return str+"TB";
+    }
+}
+</script>
+<!--websocket-->
+
+</script>
+
+
+<body>
+<!--导航栏部分-->
+<!--导航栏部分-->
+<div>
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar-collapse">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                <image src="{% static 'images/bsearch-white.png' %}">
+                <ul class="user-menu">
+                    <li class="dropdown pull-right">
+                        <a href="/" style="padding-right: 30px;">搜索</a>
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="padding-right: 30px;">
+                            <svg class="glyph stroked male-user">
+                                <use xlink:href="#stroked-male-user"></use>
+                            </svg> 用户 <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu">
+                            <li>
+                                <a href="#">
+                                    <svg class="glyph stroked male-user">
+                                        <use xlink:href="#stroked-male-user"></use>
+                                    </svg> 设置</a>
+                            </li>
+                            <li>
+                                <a href="/">
+                                    <svg class="glyph stroked gear">
+                                        <use xlink:href="#stroked-gear"></use>
+                                    </svg> 退出</a>
+                            </li>
+                            <li>
+                                <a href="#">
+                                    <svg class="glyph stroked cancel">
+                                        <use xlink:href="#stroked-cancel"></use>
+                                    </svg> 帮助</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <!-- /.container-fluid -->
+    </nav>
+</div>
+
+<div class="page-content-wrapper">
+    <!--表格部分-->
+    <div>
+        <div class="portlet-mid light bordered">
+            <div class="portlet-title">
+                <div class="caption">历史检索字符串</div>
+            </div>
+            <div class="portlet-body" id="chart1">
+                <table class="sortable table table-bordered table-hover">
+                    <caption>创建信息表格</caption>
+                    <thead>
+                        <tr>
+                            <th onselectstart="return false;">#</th>
+                            <th onselectstart="return false;">字符串</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table_info">
+                        <!--
+                        <tr onclick=location='history1010.html'>
+                            <td>1</td>
+                            <td>1001011110101010111</td>
+                            <td>2015.12.32 12:32:30</td>
+                            <td>3</td>
+                        </tr>
+                        -->
+                        {% for h in history_list %}
+                        <tr onclick=location="?searchString={{ h }}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ h }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

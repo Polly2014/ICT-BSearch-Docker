@@ -1,0 +1,366 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Index Page</title>
+	<link rel="stylesheet" href="{% static 'css/mycss.css' %}" />
+	<link rel="icon" type="image/png" href="{% static 'images/icons/bsearch.ico' %}" />
+	<link href="{% static 'css/datepicker3.css' %}" rel="stylesheet">
+	<link href="{% static 'css/styles.css' %}" rel="stylesheet">
+			<!--jquery库-->
+		<script src="{% static 'js/jquery.min.js' %}"></script>
+		<link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+		<script src="{% static 'js/bootstrap.min.js' %}"></script>
+		<link rel="stylesheet" href="{% static 'css/frame.css' %}">
+<style type="text/css">
+.menu_item:hover{color:#FFF;}
+.btn_option{
+	background-color: #e7e7e7; 
+	border: none;
+	color: black;
+	padding: 3px 10px;
+	text-align: center;
+	text-decoration: none;
+	border-radius: 8px;
+	display: inline-block;
+	font-size: 14px;
+	box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+	cursor: pointer;
+}
+.btn_option:hover{
+	color: red;
+}
+.span_advance{
+	position: relative;
+	top: 28px;
+	cursor: pointer;
+}
+.span_advance:hover{
+	color: red;
+}
+
+
+.tab .nav-tabs{
+	padding-left: 15px;
+	/*border-bottom: 1px solid #111;*/
+	background: #FFF;
+}
+.tab .nav-tabs li a{
+	color: #fff;
+	padding: 5px 20px;
+	margin-right: 10px;
+	background: #111;
+	text-shadow: 1px 1px 2px #000;
+	border: none;
+	border-radius: 0;
+	opacity: 0.5;
+	position: relative;
+	transition: all 0.3s ease 0s;
+}
+.tab .nav-tabs li a:hover{
+	background: #111;
+	opacity: 0.8;
+	padding: 5px 20px;
+}
+.tab .nav-tabs li.active a{
+	opacity: 1;
+}
+.tab .nav-tabs li.active a,
+.tab .nav-tabs li.active a:hover,
+.tab .nav-tabs li.active a:focus{
+	color: #fff;
+	background: #111;
+	border: none;
+	border-radius: 0;
+	/*padding: 15px 20px;*/
+}
+.tab .nav-tabs li a:before,
+.tab .nav-tabs li a:after{
+	content: "";
+	border-top: 32px solid transparent;
+	position: absolute;
+	top: 0px;
+}
+.tab .nav-tabs li a:before{
+	border-right: 15px solid #111;
+	left: -15px;
+}
+.tab .nav-tabs li a:after{
+	border-left: 15px solid #111;
+	right: -15px;
+}
+.tab .nav-tabs li a i,
+.tab .nav-tabs li.active a i{
+	display: inline-block;
+	padding-right: 5px;
+	font-size: 13px;
+	text-shadow: none;
+}
+.tab .tab-content{
+	border: 2px solid #111;
+	padding: 0px;
+	background: #fff;
+	font-size: 16px;
+	color: #6c6c6c;
+	line-height: 25px;
+}
+.tab .tab-content h3{
+	font-size: 24px;
+	margin-top: 0;
+}
+.input_search{
+	display: inline-block;
+	width: 93%;
+	border: none;
+	outline: none;
+}
+.multiSearch{
+	display: inline-block;
+	width: 43%;
+	height: 34px;
+	border: none;
+	outline: none;
+}
+.btn_submit{
+	display: inline-block;
+	border: none;
+	float: right;
+	background: #111;
+	width: 35px;
+	height: 35px;
+	margin-right: -1px;
+	z-index: 999;
+	color: #FFF;
+}
+.btn_relation{
+	width: 6%;
+	/*height: 31px;*/
+	display: inline-block;
+	border: none;
+	outline: none;
+	font-weight: 800;
+	font-size: 14px;
+	background: none;
+}
+.btn_submit:hover{
+	opacity: 0.7;
+}
+#multiSearchForm{
+/*	border: 2px solid black;
+	height: 37px;*/
+}
+#div_multiSearch{
+	margin-top: 26px;
+	display: none;
+}
+</style>
+<script type="text/javascript">
+// $(function(){
+// 	document.onkeydown = function(e){ 
+// 		var ev = document.all ? window.event : e;
+// 		if(ev.keyCode==13){
+// 			$('#searchForm').submit();
+// 		}
+// 	};
+// 	// $('.btn_submit').onclick(function(){
+// 	// 	$('#searchForm').submit();
+// 	// });
+// }); 
+
+function changeString(option){
+	var scale = $("#input_scale").val();
+	var $searchString = (scale==2) ? $("#BSearchString") : $("#HSearchString");
+	var searchString = $searchString.val();
+	$.post("/changeString/", {"option": option, "scale":scale, "searchString":searchString}, function(data){
+		console.log(data);
+		$(".btn_option").blur();
+		$searchString.val(data).focus();
+	});
+};
+
+function formValidAndSubmit(option){
+	if(option=='single'){
+		var scale = $("#input_scale").val();
+		var $searchString = (scale==2) ? $("#BSearchString") : $("#HSearchString");
+		var searchString = $searchString.val();
+		$.post("/validString/", {"scale":scale, "searchString":searchString}, function(data){
+			console.log(data);
+			if(data=='True'){
+				$('#searchForm').submit();
+			}else{
+				var $errorMessage = $("#singleErrorMessage");
+				$errorMessage.html("* Search string format error!");
+			}
+		});
+	}
+	if(option=='multi'){
+		var firstSearchString = $("#FirstSearchString").val();
+		var secondSearchString = $("#SecondSearchString").val();
+		var relation = $("#btn_relation").val();
+		$.post("/validMultiString/",{"firstSearchString":firstSearchString, "secondSearchString":secondSearchString, "relation":relation},function(data){
+			console.log(data);
+			if(data=='True'){
+				console.log("Ready to Submit!");
+				$("#multiSearchForm").submit();
+			}else{
+				var $errorMessage = $("#multiErrorMessage");
+				$errorMessage.html("* Search string format error!");
+			}
+		});
+	}
+	return false
+};
+
+function showMore(){
+	$("#div_more").toggle();
+}
+function changeScale(no){
+	$("#input_scale").val(no);
+	var $searchString = (no==2) ? $("#BSearchString") : $("#HSearchString");
+	$(".a_scale").blur();
+	$searchString.focus();
+	// alert($("#input_scale").val());
+}
+function changeRelation($this){
+	console.log($($this).html());
+	if($($this).html()=='AND'){
+		$($this).html('OR');
+		$("#input_relation").val('OR');
+	}else{
+		$($this).html('AND');
+		$("#input_relation").val('AND');
+	}
+	return false;
+}
+function showMultiSearch($this){
+	$("#div_singleSearch").toggle();
+	$("#div_more").toggle();
+	$("#div_multiSearch").toggle();
+	if($($this).html()=="多模检索"){
+		$($this).html("单串检索");
+	}else{
+		$($this).html("多模检索");
+	}
+}
+</script>
+</head>
+
+<body>
+
+	<!--<div>
+Index Management | Search History | Help | About
+</div>-->
+	<div>
+	<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar-collapse">
+								<span class="sr-only">Toggle navigation</span>
+								<span class="icon-bar"></span>
+								<span class="icon-bar"></span>
+								<span class="icon-bar"></span>
+							</button>
+				<ul class="user-menu">
+					<li class="dropdown pull-right">
+						<a href="/login/" class="menu_item" style="padding-right: 30px;">索引管理</a>
+						<a href="/history/" class="menu_item" style="padding-right: 30px;">检索历史</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		<!-- /.container-fluid -->
+	</nav>
+</div>
+
+	<div class='mainsearch' align='center'>
+		<image src="{% static 'images/bsearch.png' %}">
+			<!-- <span class="span_advance" onclick="showMore(); return false;">高级</span> -->
+			<span class="span_advance" onclick="showMultiSearch(this); return false;">多模检索</span>
+			<br>
+			
+			<div id="div_more">
+				<!-- <span class="btn_option" onkeydown="return false;" onclick="changeString('trans');return false;">字符转换</span> -->
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('repeat');return false;">重复</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('reverse');return false;">逆序</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('negate');return false;">取反</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('HLreverse');return false;">高低位反转</span>
+			</div>
+			<br>
+			<div class="row" id="div_singleSearch" class="div_search">
+				<div class="col-md-offset-3 col-md-6">
+					<div class="tab" role="tabpanel">
+						<ul class="nav nav-tabs" role="tablist">
+							<li role="presentation" class="active"><a href="#Binary" class="a_scale" onclick="changeScale(2);" role="tab" data-toggle="tab"><i class="fa">二进制</i><span></span></a></li>
+							<li role="presentation"><a href="#Hex" class="a_scale" onclick="changeScale(16);" role="tab" data-toggle="tab"><i class="fa">十六进制</i><span></span></a></li>
+						</ul>
+						<form id="searchForm" action="/indexSearch/" method="POST">
+							<div class="tab-content tabs">
+								<div role="tabpanel" class="tab-pane fade in active" id="Binary">	
+									<!-- <form id="binarySearchForm" action="/search/" method="GET"> -->
+									<input class="binSearch input_search" type="text" name="BSearchString" id="BSearchString" placeholder="Please input the search string (01.)" />
+									<button class="btn_submit" id="btn_b_submit" onclick="return formValidAndSubmit('single');">Go</button>
+									
+									<br /> 
+									<span id="BErrorMessage" style="color:#F00; margin-top:5px; font-size:13px;"></span>
+									<!-- </form> -->
+								</div>
+								<div role="tabpanel" class="tab-pane fade" id="Hex">
+									<!-- <form id="hexSearchForm" action="/search/" method="GET"> -->
+									<input class="hexSearch input_search" type="text" name="HSearchString" id="HSearchString" placeholder="Please input the search string (Hex Format)" />
+									<button class="btn_submit" id="btn_h_submit" onclick="return formValidAndSubmit('single');">Go</button>
+									<br /> 
+									<span id="HErrorMessage" style="color:#F00; margin-top:5px; font-size:13px;"></span>
+									<!-- </form> -->
+								</div>
+								<input id="input_scale" type="hidden" name="scale" value=2 />
+							</div>
+						</form>
+						<span id="singleErrorMessage" class="errorMessage" style="color:#F00; margin-top:5px; font-size:13px;"></span>
+					</div>
+				</div>
+			</div>
+			<div class="row" id="div_multiSearch" class="div_search">
+				<div class="col-md-offset-3 col-md-6">
+					<div class="tab" role="tabpanel">
+						<ul class="nav nav-tabs" role="tablist">
+							<li role="presentation" class="active" tabindex="-1"><a href="#Multi" class="a_scale" onclick="return false;" role="tab" data-toggle="tab"><i class="fa">二进制</i><span></span></a></li>
+						</ul>
+						<form id="multiSearchForm" action="/multiIndexSearch/" method="POST">
+							<div class="tab-content tabs">
+								<div role="tabpanel" class="tab-pane fade in active" id="Multi">
+									<input class="multiSearch" type="text" name="FirstSearchString" id="FirstSearchString" placeholder="Please input the first search string (01.)" tabIndex="1" />
+									<button id="btn_relation" class="btn_relation" onclick="return changeRelation(this);">AND</button>
+									<input id="input_relation" type="hidden" name="relation" value="AND" />
+									<input class="multiSearch" type="text" name="SecondSearchString" id="SecondSearchString" placeholder="Please input the second search string (01.)" tabIndex="1" />
+									<button class="btn_submit" id="btn_m_submit" onclick="return formValidAndSubmit('multi');" tabIndex="3">Go</button>
+								</div>
+							</div>
+						</form>
+						<span id="multiErrorMessage" class="errorMessage" style="color:#F00; margin-top:5px; font-size:13px;"></span>
+					</div>
+				</div>
+			</div>
+			<!--<form action="bsearch.php" method="post">-->
+<!-- 			<form id="searchForm" action="/search/" method="GET">
+				<div>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('trans');return false;">字符转换</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('trans');return false;">十六进制转换</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('repeat');return false;">重复</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('reverse');return false;">逆序</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('negate');return false;">取反</span>
+				<span class="btn_option" onkeydown="return false;" onclick="changeString('HLreverse');return false;">高低位反转</span>
+				</div>
+				<br />
+				<input class="regexcenter" type="text" name="searchString" id="searchString" placeholder="Please input the search string (01.)" autofocus />
+				
+				<br /> {% if error_message %}<span style="color:#F00; margin-top:5px; font-size:13px;">* {{error_message}}</span>{% endif %}
+			</form> -->
+	</div>
+
+
+</body>
+
+</html>

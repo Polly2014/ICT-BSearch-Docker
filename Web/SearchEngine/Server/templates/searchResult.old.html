@@ -1,0 +1,499 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+  <!--jquery库-->
+        <script src="{% static 'js/jquery.min.js' %}"></script>
+        <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+        <script src="{% static 'js/bootstrap.min.js' %}"></script>
+        <link rel="stylesheet" href="{% static 'css/frame.css' %}">
+        <link rel="stylesheet" href="{% static 'css/mycss.css' %}">
+    </head>
+    <!--导入futioncharts-->
+    <script type="text/javascript" src="{% static 'fusioncharts/fusioncharts.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fusioncharts/fusioncharts.charts.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fusioncharts/themes/fusioncharts.theme.fint.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fusioncharts/themes/fusioncharts.theme.zune.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fusioncharts/sortable.js' %}"></script>
+<!--换算-->
+<script>
+function transform(num){
+    if(num < 1024){
+        return num+"B";
+    }else if(num < 1024*1024){
+        str = (num/1024).toFixed(2);
+        return str+"KB";
+    }else if(num < 1024*1024*1024){
+        str = (num/1024/1024).toFixed(2);
+        return str+"MB";
+    }else if(num < 1024*1024*1024*1024){
+        str = (num/1024/1024/1024).toFixed(2);
+        return str+"GB";
+    }else if(num < 1024*1024*1024*1024*1024){
+        str = (num/1024/1024/1024/1024).toFixed(2);
+        return str+"TB";
+    }
+}
+</script>
+<!--模态框触发-->
+<script>
+function targetto(index){
+    $("#table-search").html("");
+    $.each(CurrentJson[index].match_list, function(i, item){
+        record = "<tr><td>"+item['length']+"</td><td>"+item["offset_bit"]+"</td><td>"+item["offset"]+"</td></tr>"
+        $("#table-search").append(record);
+    });
+}
+</script>
+<!--websocket-->
+ <script language="javascript" type="text/javascript"> 
+        var LastMatches = 0;
+        var CurrentJson = null;
+        function WebSocketSearch() {
+            if ("WebSocket" in window) {
+                var wsUri ="ws://" + window.location.host + "/indexSearch/";
+                socket = new WebSocket(wsUri);
+                socket.onmessage = function (evt) {
+                    if (evt.data == 'Over') {
+                        socket.close();
+                    } else {
+                        var format_result = $.parseJSON(evt.data);
+                        var result_detail = format_result["detail"]; // 取出的detai
+                        var total_size = format_result["summary"].size_total_file;
+                        var searched_size = format_result["summary"].size_searched_file;
+                        var wancheng = (100*searched_size/total_size).toFixed(2);  // 完成的百分比
+                        var rate = format_result["summary"].rate;
+                        CurrentJson = result_detail;
+
+                        // 圆形进度条部分
+                        var circle_bar = getChartFromId('PieBar');
+                        var current_data1 = circle_bar.getChartData("json"); // 获取当前的数据
+                        if(wancheng<4){
+                            current_data1.chart.paletteColors = "#4D4D4D,#999999";
+                        }else if(wancheng<20){
+                            current_data1.chart.paletteColors = "#801010,#FF2020";
+                        }else if(wancheng<40){
+                            current_data1.chart.paletteColors = "#612500,#c04a00";
+                        }else if(wancheng<70){
+                            current_data1.chart.paletteColors = "#714500,#E09900";
+                        }else if(wancheng<100){
+                            current_data1.chart.paletteColors = "#365601,#6BAA01";
+                        }else{
+                            current_data1.chart.paletteColors = "#30CA30,#30CA30"    
+                        }
+                        current_data1.data[0].value = 100 - wancheng;
+                        current_data1.data[1].value = wancheng;
+                        circle_bar.setChartData(current_data1, "json");
+                        $("#data-search").html(transform(searched_size)+'/'+transform(total_size));
+                        
+                        // 速率图
+                        var sl_rate=getChartFromId('WaveData');
+                        var current_data2=sl_rate.getChartData("json"); // 获取当前的数据
+                        for (var i=0;i<9;i++){
+                            current_data2.data[i].value = current_data2.data[i+1].value;
+                            current_data2.data[i].label = current_data2.data[i+1].label;
+                        }
+                        var currDate = new Date();
+                        var label = currDate.getHours() + ":" + currDate.getMinutes() + ":" + currDate.getSeconds();
+                        current_data2.data[9].value = rate; 
+                        current_data2.data[9].label = label;
+                        sl_rate.setChartData(current_data2, "json");
+
+                        // 柱状图
+                        var current_match = format_result["summary"].num_match;
+                        var matches = current_match-LastMatches;
+                        LastMatches = current_match;
+                        var match_bar = getChartFromId('MatchSpeed');
+                        var current_data3=match_bar.getChartData("json"); // 获取当前的数据
+                        for (var i=0;i<11;i++){
+                            current_data3.data[i].value = current_data3.data[i+1].value;
+                        }
+                        current_data3.data[11].value = matches;
+                        match_bar.setChartData(current_data3, "json");
+
+                        // 表格
+                        // 填写下方的表格
+                        // 模态框部分
+                        $("#table_info").html('');
+                        $.each(result_detail, function(index,item){
+                            var li_code = "<tr data-toggle='modal'  data-target='#TableModal' onclick=targetto("+index+")><td>"+item["name"]+"</td><td>"+item["directory_info"]+"</td><td>"+transform(item["file_size"])+"</td><td>"+item["num_match"]+"</td><td>"+item["MPM"]+"</td></tr>";
+                            $("#table_info").append(li_code);
+                        });
+
+                    }
+                }
+                if (socket.readyState == WebSocket.OPEN) socket.onmessage();
+                socket.onopen = function (evt) { 
+                	var content = {
+						"type":"searchInformation",
+						"searchString":$("#searchString").text(),
+						//"searchString":{{ searchString }},
+					}
+					socket.send(JSON.stringify(content));
+                };
+                socket.onclose = function (evt) {
+                    socket.close();
+                };
+            } else {
+                // 浏览器不支持 WebSocket
+                alert("您的浏览器不支持 WebSocket!");
+            }
+        }
+
+        $(document).ready(function () {
+            WebSocketSearch();
+        });
+</script>
+<!--柱状图-->
+<script>
+    FusionCharts.ready(function () {
+        var revenueChart = new FusionCharts({
+            type: 'column2d',
+            renderAt: 'chart-1',
+            width: '100%',
+            height: '82%',
+            dataFormat: 'json',
+            id: "MatchSpeed",
+            dataSource: {
+                "chart": {
+                    "caption": "单位时间匹配数目",
+                    "subCaption": "",
+                    "xAxisName": "时间",
+                    "yAxisName": "匹配数目",
+                    "numberPrefix": "",
+                    "paletteColors": "#0075c2",
+                    "bgColor": "#ffffff",
+                    "borderAlpha": "20",
+                    "canvasBorderAlpha": "0",
+                    "usePlotGradientColor": "0",
+                    "plotBorderAlpha": "10",
+                    "placevaluesInside": "1",
+                    "rotatevalues": "1",
+                    "valueFontColor": "#ffffff",
+                    "showXAxisLine": "1",
+                    "xAxisLineColor": "#999999",
+                    "divlineColor": "#999999",
+                    "divLineIsDashed": "1",
+                    "showAlternateHGridColor": "0",
+                    "subcaptionFontBold": "0",
+                    "subcaptionFontSize": "14",
+                    "animation": "0"
+                },
+                "data": [
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    },
+                    {
+                        "label": "",
+                        "value": "0"
+                    }
+                ],
+            }
+        }).render();
+    });
+</script>
+<!--波浪图-->
+<script>
+FusionCharts.ready(function () {
+    var ipSalesChart = new FusionCharts({
+      //  type: 'splinearea',
+        type: 'area2d',
+        renderAt: 'chart-3',
+        width: '100%',
+        height: '82%',
+        dataFormat: 'json',
+        id: "WaveData",
+        dataSource: {
+            "chart": {
+                "caption": "",
+                "subCaption": "",
+                "xAxisName": "",
+                "yAxisName": "",                    
+                "captionFontSize": "14",
+                "subcaptionFontSize": "14",
+                "baseFontColor" : "#333333",
+                "baseFont" : "Helvetica Neue,Arial",                        
+                "subcaptionFontBold": "0",
+                "paletteColors" : "#6baa01",
+                //"paletteColors": "#0075c2",
+                "usePlotGradientColor": "0",
+                "bgColor" : "#ffffff",
+                "showBorder" : "0",
+                "showValues": "0",                 
+                "showShadow" : "0",
+                "showAlternateHGridColor" : "0",
+                "showCanvasBorder": "0",
+                "showXAxisLine": "1",
+                "xAxisLineThickness": "1",
+                "xAxisLineColor": "#999999",
+                "canvasBgColor" : "#ffffff",
+                "divlineAlpha" : "100",
+                "divlineColor" : "#999999",
+                "divlineThickness" : "1",
+                "divLineIsDashed" : "1",
+                "divLineDashLen" : "1",
+                "divLineGapLen" : "1",
+
+                "animation": "0",
+                "yAxisMaxValue": "20",  //定义y轴最大刻度
+                "yAxisValuesStep": "1",
+
+            },
+            "data": [
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                }, 
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                }, 
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                }, 
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                }, 
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                },
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                },
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                },
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                },
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                },
+                {
+                    "label": "--:--:--",
+                    "value": "0"
+                }
+            ]
+        }
+    }).render();
+});
+</script>
+<!--饼状进度条-->
+<script>
+FusionCharts.ready(function () {
+    var ageGroupChart = new FusionCharts({
+        type: 'doughnut2d',
+        renderAt: 'CircleBar',
+        width: '100%',
+        height: '300',
+        dataFormat: 'json',
+        id: "PieBar",
+        dataSource: {
+            "chart": {
+                "caption": "",
+                "subCaption": "",
+                "margin-left": "100",
+                "enableSmartLabels": "0",
+                "startingAngle": "90",
+                "showPercentValues": "0",
+                "showPercentInTooltip": "0",
+                "paletteColors": "#4D4D4D,#999999",
+                "showValues": "1",
+                "decimals": "1",
+                //Dynamic tool-tip using HTML and macro variables
+                "plottooltext":"<div id='nameDiv'>$label :</div>{br}No. Of Visitors : <b>$dataValue</b> of the total <b>$sum</b> visitors{br}In Percentage : <b>$percentValue</b>",
+                //Theme
+                "decimals": "2",
+                "theme" : "fint",
+                "animation": "0",
+                "slicingDistance": "0", // 不允许分割
+                "showHoverEffect": "0", // 取消悬停的效果
+                "showPercentValues": "1",
+            },
+            "data": [
+                {
+                    "label": "还未完成",
+                    "value": "100"
+                }, 
+                {
+                    "label": "已完成",
+                    "value": "0"
+                }
+            ]
+        }
+    });
+    ageGroupChart.render();
+});
+</script>
+
+    <body>
+        <!--导航栏部分-->
+        <div>
+            <nav class="navbar navbar-tabs " role="navigation">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="#" style="font-size: 40px">BSearch</a>
+                    </div>
+                    <ul class="nav nav-tabs ">
+                        <li class="active" style="padding-left: 400px; font-size: 22px;"><a href="#">正在搜索: <span id="searchString">{{ searchString }}</span></a></li>
+                        <ul class="nav navbar-right navbar-tabs">
+                            <li class="navbar-right" style="padding-right: 30px; font-size: 20px;"><a href="#">退出</a></li>
+                            <li class="navbar-right" style="padding-right: 50px; font-size: 20px;"><a href="#">用户</a></li>
+                            <li class="navbar-right" style="padding-right: 50px; font-size: 20px;"><a href="/history/">历史搜索</a></li>
+                        </ul>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+        <div class="page-content-wrapper">
+            <!--图表部分-->
+            <div class="row">
+                <div class="col-md-4">
+                   <div class="portlet-left light bordered" style="height: 340px">
+                        <div class="portlet-title">
+                            <div class="caption">创建总进度</div>
+                        </div>
+                        <div class="portlet-body">
+                            <div id="CircleBar"></div>
+                            <div style="font-size: 14px; float: right;" id="data-search">数据量: 0/0</div>
+                        </div>
+                   </div>
+                </div>
+
+                 <div class="col-md-3">
+                   <div class="portlet-mid light bordered" style="height: 340px; margin-left: 0px; margin-right: 0px;">
+                        <div class="portlet-title">
+                            <div class="caption">匹配数目</div>
+                        </div>
+                        <div class="portlet-body">
+                             <div id="chart-1"></div>
+                        </div>
+                   </div>
+                </div>
+                <div class="col-md-5">
+                   <div class="portlet-right light bordered" style="height: 340px;">
+                        <div class="portlet-title">
+                            <div class="caption">检索速率</div>
+                        </div>
+                        <div class="portlet-body">
+                             <div id="chart-3"></div>
+                        </div>
+                   </div>
+                </div>
+            </div>
+            <!--表格部分-->
+            <div >
+                <div class="portlet-mid light bordered" >
+                    <div class="portlet-title">
+                        <div class="caption">表格</div>
+                    </div>
+                <div class="portlet-body"  id="chart1">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th class="text-left" width="35%" >文件名</th>
+                            <th class="text-left" width="20%">目录</th>
+                            <th class="text-left" width="10%">大小</th>
+                            <th class="text-left" width="10%">匹配数</th>
+                            <th class="text-left" width="10%">MPM</th>
+                        </tr>
+                    </thead>
+                    <tbody id='table_info'>
+                        <tr data-toggle="modal" data-target="#TableModal">
+                            <td>/home/polly/test/MirantisOpenStack-5.1.iso</td>
+                            <td>/home/polly/test/</td>
+                            <td>1023.25GB</td>
+                            <td>1</td>
+                            <td>44</td>
+                        </tr>
+                    </tbody>
+                </table>
+                    </div>
+                </div>
+            </div>
+     </div>
+
+     <!-- 模态框（Modal） -->
+        <div class="modal fade" style="padding-top: 10%" id="TableModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+                            &times;
+                        </button>
+                        <h4 class="modal-title" id="myModalLabel">
+                            详细信息
+                        </h4>
+                    </div>
+                    <div class="modal-body" style="width: 100%; ">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th class="text-left" width="10%" style="font-size: 18px;">偏移量</th>
+                                    <th class="text-left" width="10%" style="font-size: 18px;">二进制</th>
+                                    <th class="text-left" width="10%" style="font-size: 18px;">十六进制</th>
+                                    <th class="text-left" width="20%" style="font-size: 18px;">ASCII</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-search">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+</body>
+</html>

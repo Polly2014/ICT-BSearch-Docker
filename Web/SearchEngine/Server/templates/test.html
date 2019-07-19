@@ -1,0 +1,70 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+	<title>Document</title>
+</head>
+<style type="text/css">
+	#table_browser{ }
+	#table_browser td{ border:1px solid #000; }
+	#ul_browser{}
+	#ul_browser li{ cursor:pointer; border:1px solid transparent; }
+	#ul_browser li:hover{ cursor:pointer; border:1px solid #66a7e8; background:#e5f3fb; }
+	.highlight{ border:1px solid #66a7e8; background:#d1e8ff; }
+</style>
+<body>
+<div id="div_browser" style="width:600px; height:500px; background:#CCC;">
+	<span>当前目录:</span><span id="currentPath">/</span>
+	<hr />
+	<ul id="ul_browser">
+
+	</ul>
+	<button id="btn_confirm" onclick="getTotalPath();" disabled="disabled">确定</button>
+</div>
+
+</body>
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script type="text/javascript">
+
+function selectItem(which){
+	$(which).parent().children("li").removeClass("highlight");
+	$(which).addClass("highlight");
+	console.log($(which).html());
+	if($(which).html()==".."){
+		$("#btn_confirm").attr("disabled", true);
+	}else{
+		$("#btn_confirm").attr("disabled", false);
+	}
+}
+
+function getTotalPath(){
+	var current_path = $("#currentPath").html();
+	var current_dir = $("li.highlight").html();
+	totalPath = current_path+'/'+current_dir;
+
+	console.log(totalPath);
+}
+
+function showDirectoryInfo(currentPath=""){
+	$.post("/getDirectoryBrowserInfo/", {"currentPath":currentPath}, function(data){
+		var browser_info = $.parseJSON(data);
+		var current_path = browser_info["dir_current"];
+		var directory_list = browser_info["dir_list"];
+
+		$("#currentPath").html(current_path);
+		$("#ul_browser").html("");
+		$.each(directory_list, function(index,item){
+			var li_code = '<li onclick="selectItem(this);" ondblclick="showDirectoryInfo(\''+item["link"]+'\');">'+item["name"]+'</li>';
+			$("#ul_browser").append(li_code);
+		});
+
+		console.log(browser_info);
+	});
+};
+
+$(document).ready(function(){
+	showDirectoryInfo();
+});
+</script>
+</html>

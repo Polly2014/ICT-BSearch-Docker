@@ -1,0 +1,690 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<!--历史搜索页面主页-->
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <!--jquery库-->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script language="JavaScript" type="text/javascript" src="{% static 'js/jquery.tablesorter.min.js' %}"></script>
+    <script src="{% static 'js/jquery.page.min.js' %}"></script>
+    <!--自定义库-->
+    <link rel="stylesheet" href="{% static 'css/frame.css' %}">
+    <!--<link rel='stylesheet' href="{% static 'css/mycss.css' %}">-->
+</head>
+<!--导入futioncharts-->
+<script type="text/javascript" src="{% static 'js/sortable.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/fusioncharts.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/fusioncharts.charts.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/themes/fusioncharts.theme.fint.js' %}"></script>
+<script type="text/javascript" src="{% static 'fusioncharts/themes/fusioncharts.theme.zune.js' %}"></script>
+<link href="{% static 'css/datepicker3.css' %}" rel="stylesheet">
+<link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+<style>
+tr:hover{cursor:pointer}
+.tcdPageCode{padding: 15px 20px;text-align: left;color: #ccc;text-align:center;}
+.tcdPageCode a{display: inline-block;color: #428bca;display: inline-block;height: 25px;	line-height: 25px;	padding: 0 10px;border: 1px solid #ddd;	margin: 0 2px;border-radius: 4px;vertical-align: middle;}
+.tcdPageCode a:hover{text-decoration: none;border: 1px solid #428bca;}
+.tcdPageCode span.current{display: inline-block;height: 25px;line-height: 25px;padding: 0 10px;margin: 0 2px;color: #fff;background-color: #428bca;	border: 1px solid #428bca;border-radius: 4px;vertical-align: middle;}
+.tcdPageCode span.disabled{	display: inline-block;height: 25px;line-height: 25px;padding: 0 10px;margin: 0 2px;	color: #bfbfbf;background: #f2f2f2;border: 1px solid #bfbfbf;border-radius: 4px;vertical-align: middle;}
+</style>
+<!--饼状图-->
+<script>
+    FusionCharts.ready(function () {
+        var revenueChart = new FusionCharts({
+            type: 'pie2d',
+            renderAt: 'PieChart',
+            width: '100%',
+            height: '450',
+            dataFormat: 'json',
+            id: 'Pie',
+            dataSource: {
+                "chart": {
+                    "caption": "饼状图",
+                    "formatnumberscale": "0",
+                    "showBorder": "0",
+                    "showLegend": "1",
+                    "theme": "fint",
+                    "showPercentValues": "1",
+                    "showPercentInToolTip": "0",
+                    //Setting legend to appear on right side
+                    "legendPosition": "right",
+                    //Caption for legend
+                    "legendCaption": "Alphabet Used: ",
+                    //Customization for legend scroll bar cosmetics
+                    "legendScrollBgColor": "#cccccc",
+                    "legendScrollBarColor": "#999999",
+                    "showLabels": "0",
+                },
+                "data": [
+                    // {
+                    //     "label": "/home/polyy/1.txt",
+                    //         "value": "91852",
+                    //         "issliced": "1"
+                    // },
+                ]
+            }
+        });
+
+        revenueChart.render();
+    });
+
+</script>
+<!--五角星-->
+<script>
+    FusionCharts.ready(function () {
+        var budgetChart = new FusionCharts({
+            type: 'radar',
+            renderAt: 'StarChart',
+            width: '100%',
+            height: '460',
+            dataFormat: 'json',
+            id: 'RadarChart1',
+            dataSource: {
+                "chart": {
+                    "caption": "字符串1010101010101010",
+                    "subCaption": "",
+                    "captionFontSize": "14",
+                    "subcaptionFontSize": "14",
+                    "numberPrefix": "",
+                    "baseFontColor": "#333333",
+                    "baseFont": "查询信息表,平均查询信息",
+                    "subcaptionFontBold": "0",
+                    "paletteColors": "#008ee4,#6baa01",
+                    "bgColor": "#ffffff",
+                    "radarfillcolor": "#ffffff",
+                    "showBorder": "0",
+                    "showShadow": "0",
+                    "showCanvasBorder": "0",
+                    "legendBorderAlpha": "0",
+                    "legendShadow": "0",
+                    "divLineAlpha": "10",
+                    "usePlotGradientColor": "0",
+                    "numberPreffix": "$",
+                    "legendBorderAlpha": "0",
+                    "legendShadow": "0"
+                },
+                "categories": [
+                    {
+                        "category": [
+                            { "label": "文件总数" },
+                            { "label": "匹配数" },
+                            { "label": "文件大小" },
+                            { "label": "目录覆盖率" },
+                            { "label": "MPM" }
+                        ]
+                    }
+                ],
+                "dataset": [
+                    {
+                        "seriesname": "当前检索字符串",
+                        "data": [
+                            { "value": 0 },
+                            { "value": 0 },
+                            { "value": 0 },
+                            { "value": 0 },
+                            { "value": 0 },
+                        ],
+
+                    },
+                    {
+                        "seriesname": "平均水平",
+                        "data": [
+                            { "value": 0 },
+                            { "value": 0 },
+                            { "value": 0 },
+                            { "value": 0 },
+                            { "value": 0 },
+                        ]
+                    }
+                ]
+            }
+        });
+        budgetChart.render();
+    });
+
+</script>
+<!--换算-->
+<script>
+    function transform(num) {
+        if (num < 1024) {
+            return num + "B";
+        } else if (num < 1024 * 1024) {
+            str = (num / 1024).toFixed(2);
+            return str + "KB";
+        } else if (num < 1024 * 1024 * 1024) {
+            str = (num / 1024 / 1024).toFixed(2);
+            return str + "MB";
+        } else if (num < 1024 * 1024 * 1024 * 1024) {
+            str = (num / 1024 / 1024 / 1024).toFixed(2);
+            return str + "GB";
+        } else if (num < 1024 * 1024 * 1024 * 1024 * 1024) {
+            str = (num / 1024 / 1024 / 1024 / 1024).toFixed(2);
+            return str + "TB";
+        }
+    }
+
+
+    /*----------------------
+        showDetailMatchInfo函数-参数说明：
+        name: full path and name
+        matches: [
+            {
+                "offset": 25067362,
+                "offset_bit": 7,
+                "length": 20
+            },
+            {
+                "offset": 25301856可能是电话号码，是否拨号?,
+                "offset_bit": 7,
+                "length": 20
+            }
+        ]
+    ----------------------*/
+        
+        var name = null;
+        var matches = null;
+        var lastPage_modal = 0; // 这个记录了当前获取的文件的页数
+        var pages_modal = -1; // 这个记录了当前页面的页码数目
+        var num_bt_modal = 0;  // 这个记录显示出来的分页按钮数目，当等于5的时候就没有啥区别了
+        var currentPage_modal = 1;  // 当前的活动页
+        var firstPageNum_modal = 1;  // 当前显示的第一页
+        function getPage(ClickPage) {  // 模态框的分页机制
+            flag = 1; // 判断是否要切换页面
+            if(ClickPage == -1){ // 点击的是前一页， 这里因为一开始的时候，前一页已经禁用了，所以不会出现 <- 1
+                if(currentPage_modal == 1){
+                    flag = 0;
+                }else{
+                    currentPage_modal = currentPage_modal - 1;
+                }
+            }else if(ClickPage == 11){ // 点击的是下一页
+                if(currentPage_modal == lastPage_modal){
+                    flag = 0;
+                    console.log("已经是最后一页啦");
+                }else{
+                    currentPage_modal = currentPage_modal + 1;
+                }
+            }else{  // 获取按钮上的号码
+                a = parseInt($("#modal1-page"+ClickPage).text()); 
+                console.log("按钮上号码是"+a); 
+                if(a != currentPage_modal){
+                    currentPage_modal = a;
+                }
+            }
+            // 刷新页面
+            if (flag == 1) {
+                // var currentPage = currentFirstPage_modal + currentActivePage_modal - 1;
+                var currentPage = currentPage_modal;  
+
+                // 对分页进行操作
+                console.log("当前页是，总页数是"+currentPage_modal+'ff'+lastPage_modal);
+                if(currentPage_modal<=5 || ((currentPage_modal <= 10) && lastPage_modal <= 10)){ // 依次展开
+                    for(var i = 1; i <= pages_modal; i++){
+                        $("#modal1-page"+i).html(i);
+                        $("#modal1-p"+i).removeClass("active");
+                        $("#modal2-page"+i).html(i);
+                        $("#modal2-p"+i).removeClass("active");
+                    }
+                    $("#modal1-p"+currentPage_modal).addClass("active");
+                    $("#modal2-p"+currentPage_modal).addClass("active");
+                }else{
+                    if((lastPage_modal-currentPage_modal) < 5){ // 如果当前页处于最后五页
+                        for(var i = 10; i >= 1; i--){
+                            $("#modal1-page"+i).html(lastPage_modal+i-10);
+                            $("#modal1-p"+i).removeClass("active");
+                            $("#modal2-page"+i).html(lastPage_modal+i-10);
+                            $("#modal2-p"+i).removeClass("active");
+                        }
+                        $("#modal1-p"+(10-lastPage_modal+currentPage_modal)).addClass("active");
+                        $("#modal2-p"+(10-lastPage_modal+currentPage_modal)).addClass("active");
+                    }else{  // 将current页面放在第五个位置
+                        for(var i = 1; i <= 10; i++){
+                            $("#modal1-page"+i).html(currentPage_modal-5+i);
+                            $("#modal1-p"+i).removeClass("active");
+                            $("#modal2-page"+i).html(currentPage_modal-5+i);
+                            $("#modal2-p"+i).removeClass("active");
+                        }
+                        $("#modal1-p"+5).addClass("active");
+                        $("#modal2-p"+5).addClass("active");
+                    }
+                }
+                showDetailMatchInfo(-1, currentPage); // 刷新表格 
+                // 对前一页和下一页进行操作
+                if(currentPage_modal <= 1){
+                    $("#modal1-p0").addClass("disabled");
+                    $("#modal2-p0").addClass("disabled");
+                }else{
+                    $("#modal1-p0").removeClass("disabled");
+                    $("#modal2-p0").removeClass("disabled");
+                }
+                if(currentPage_modal == lastPage_modal){
+                    $("#modal1-p11").addClass("disabled");
+                    $("#modal2-p11").addClass("disabled");
+                }else{
+                    $("#modal1-p11").removeClass("disabled");
+                    $("#modal2-p11").removeClass("disabled");
+                }
+            }
+        }
+
+        function readFileContent(index){
+            var name = result_detail[index].name;
+            var matches = JSON.stringify(result_detail[index].match_list);
+
+            action = '/fileContentReader/';
+            var form = $('<form></form>');
+            form.attr('action', action);
+            form.attr('method', 'post');
+            form.attr('target', '_blank');
+            var input_name = $('<input type="text" name="_uri" />');
+            var input_matches = $('<input type="text" name="_matches" />');
+            input_name.attr('value', name);
+            input_matches.attr('value', matches);
+            form.append(input_name);
+            form.append(input_matches);
+            $(document.body).append(form);
+            form.submit();
+            // console.log(form.html());
+            return false;
+        }
+
+        function showDetailMatchInfo(index, pageNum) { // pageNum先恒定为1
+            var first = false;
+            if (index < 0) {  // index < 0 说明就是在本页面分页
+                index = current_index;
+            } else {
+                current_index = index;  
+                first = true;
+                console.log("打开页面");
+            }
+
+            if (first==true) {   // 第一次加载出来，就是弹出来
+                // 渲染出分页
+                currentPage_modal = 1;  // 每次加载的时候初始化 初始页的分页
+                
+                name = result_detail[index].name;  // 获取点击条目里的内容
+                lastPage_modal = Math.ceil(result_detail[index].match_list.length / 5);  // 页数
+                console.log(lastPage_modal);
+                matches = JSON.stringify(result_detail[index].match_list);
+                if(lastPage_modal > 0){
+                    $("#pagination1").html("");
+                    $("#pagination2").html("");
+                    var pre_code1 = "<li id='modal1-p0' class='disabled'><a href='###' id='modal1-p0' onclick='getPage(-1);return false;'>&laquo;</a></li>";  // 前一页
+                    var pre_code2 = "<li id='modal2-p0' class='disabled'><a href='###' id='modal2-p0' onclick='getPage(-1);return false;'>&laquo;</a></li>";  // 前一页
+                    $("#pagination1").append(pre_code1);
+                    $("#pagination2").append(pre_code2);
+                    $("#modal1-p0").addClass("disabled");
+                    $("#modal2-p0").addClass("disabled");
+                    // 中间页
+                    var max;
+                    if(lastPage_modal > 10){
+                        pages_modal = 10;  // 控制在10也内
+                    }else{
+                        pages_modal = lastPage_modal;
+                    }
+                    for(var i=1; i <= pages_modal; i++){
+                        if(i==1){ // 第一页是active的
+                            var li_code1 = "<li id='modal1-p"+i+"' class='active'><a href='###' onclick='getPage("+i+");return false;' id='modal1-page"+i+"'>"+i+"</a></li>"
+                            var li_code2 = "<li id='modal2-p"+i+"' class='active'><a href='###' onclick='getPage("+i+");return false;' id='modal2-page"+i+"'>"+i+"</a></li>"
+                        }else{
+                            var li_code1 = "<li id='modal1-p"+i+"' ><a href='###' onclick='getPage("+i+");return false;' id='modal1-page"+i+"'>"+i+"</a></li>"
+                            var li_code2 = "<li id='modal2-p"+i+"' ><a href='###' onclick='getPage("+i+");return false;' id='modal2-page"+i+"'>"+i+"</a></li>"
+                        }
+                        $("#pagination1").append(li_code1);
+                        $("#pagination2").append(li_code2);
+                    }
+                    // 最后几页
+                    if(lastPage_modal == 1){
+                        var post_code1 = "<li id='modal1-p11' class='disabled'><a href='###' id='modal1-11' onclick='getPage(11);return false;'>&raquo;</a></li>";  // 前一页
+                        var post_code2 = "<li id='modal2-p11' class='disabled'><a href='###' id='modal2-11' onclick='getPage(11);return false;'>&raquo;</a></li>";  // 前一页
+                        $("#pagination1").append(post_code1);
+                        $("#pagination2").append(post_code2);
+                        $("#modal1-p11").addClass("disabled");
+                        $("#modal2-p11").addClass("disabled");
+                    }else{
+                        var post_code1 = "<li id='modal1-p11' ><a href='###' id='modal1-11' onclick='getPage(11);return false;'>&raquo;</a></li>";  // 前一页
+                        var post_code2 = "<li id='modal2-p11' ><a href='###' id='modal2-11' onclick='getPage(11);return false;'>&raquo;</a></li>";  // 前一页
+                        $("#pagination1").append(post_code1);
+                        $("#pagination2").append(post_code2);
+                    }
+                }
+            }
+        $.post("/getDetailMatchInfo/", { "name": name, "matches": matches, "pageNum": pageNum }, function (data) {
+            /*---------------
+            data数据样例:
+            <tr class="tr_class">
+               <td class="td_class_offset">0x00112228</td>
+               <td class="td_class_hex">61 62 63 64 65 66 67 68</td>
+               <td class="td_class_ascii">abcdefgh</td>
+               <td class="td_class_bit">01100001 01100010 01100011 01100100  01100101 01100110 01100111 01101000</td>
+           </tr>
+           <tr class="tr_class">
+               <td class="td_class_offset">0x00112230</td>
+               <td class="td_class_hex">61 62 6<prefix>3 64 65 6<suffix>6 67 68</td>
+               <td class="td_class_ascii">ab<prefix>cdef<suffix>gh</td>
+               <td class="td_class_bit">01100001 01100010 0110<prefix>0011 01100100  01100101 011<suffix>00110 01100111 01101000</td>
+           </tr>
+            ---------------*/
+            $("#table-modal").html("");
+            $("#table-modal").append(data);
+        });
+    }
+
+</script>
+
+
+<script language="javascript" type="text/javascript">
+    var lastPage = 10; // 这个记录了当前获取的文件的页数
+    var pages = -1; // 这个记录了当前页面的页码数目
+    var num_bt = 0;  // 这个记录显示出来的分页按钮数目，当等于5的时候就没有啥区别了
+    var currentPage = 1;  // 当前的活动页
+    var firstPageNum = 1;  // 当前显示的第一页
+
+    var CurrentJson = null;  // 全局变量
+    var table_info = null;
+    var result_detail = null;
+    /*------------获取URL中的参数-------------*/
+    function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return unescape(r[2]); return null;
+    }
+
+    // 分页
+    // $(".tcdPageCode").createPage({
+    //     pageCount:lastPage,
+    //     current:1,
+    //     backFn:function(p){
+    //         console.log(p);
+    //         currentPage = p;
+    //         $("#table_info").html('');
+    //         // 一开始只取前10个
+    //         currenTableInfo = table_info.slice((currentPage-1)*10, currentPage*10);
+    //         $.each(currenTableInfo, function (index, item) {
+    //             var li_code = "<tr data-toggle='modal'  data-target='#TableModal' onclick='showDetailMatchInfo(" + index+ ", 1)'><td class='text-left'>" + item["name"] + "</td><td class='text-right'>" + transform(item["file_size"]) + "</td><td class='text-right'>" + item["num_match"] + "</td><td class='text-right'>" + item["MPM"] + "</td></tr>";
+    //             $("#table_info").append(li_code);
+    //         });
+    //     }
+    // });
+
+    
+    /*-----------页面加载时，即向服务器发起请求--------------*/
+    $(document).ready(function () {
+        /*----------------------
+            请求地址： /getHistoryDetail
+            请求方式： POST
+            请求参数： searchString //检索的字符串
+            返回内容：
+                {
+                    "struct_info":{
+                        "searchString":{"num_file":XXX, "num_match":XXX, "file_size":XXX, "coverage":XXX, "MPM":XXX},
+                        "average":{"num_file":XXX, "num_match":XXX, "file_size":XXX, "coverage":XXX, "MPM":XXX},
+                        "maximum":{"num_file":XXX, "num_match":XXX, "file_size":XXX, "coverage":XXX, "MPM":XXX}
+                    },
+                    "pie_info":[
+                        {"lable":XXXXXX, "value":XXXXX},
+                        {"lable":XXXXXX, "value":XXXXX},
+                    ],
+                    "table_info":[
+                        {"name":XXX, "directory_info":XXX, "file_size":XXX, "num_match":XXX, "MPM":XXX},
+                        {"name":XXX, "directory_info":XXX, "file_size":XXX, "num_match":XXX, "MPM":XXX},
+                    ]
+                }
+        ----------------------*/
+        $.post("/getHistoryDetail/", { "searchString": getUrlParam("searchString") }, function (data) {
+            var result = $.parseJSON(data); // 转换
+            CurrentJson = result;  // 将全局变量赋值
+            
+            // 雷达图
+            var radar = FusionCharts("RadarChart1");
+            console.log(radar);
+
+            var current_data = radar.getChartData("json");
+            var struct_info = result['struct_info'];
+            current_data.dataset[0].data[0].value = struct_info['searchString']['num_file'] / struct_info['maximum']['num_file'];
+            current_data.dataset[0].data[1].value = struct_info['searchString']['num_match'] / struct_info['maximum']['num_match'];
+            current_data.dataset[0].data[2].value = struct_info['searchString']['file_size'] / struct_info['maximum']['file_size'];
+            current_data.dataset[0].data[3].value = struct_info['searchString']['coverage'] / struct_info['maximum']['coverage'];
+            current_data.dataset[0].data[4].value = struct_info['searchString']['MPM'] / struct_info['maximum']['MPM'];
+            current_data.dataset[1].data[0].value = struct_info['average']['num_file'] / struct_info['maximum']['num_file'];
+            current_data.dataset[1].data[1].value = struct_info['average']['num_match'] / struct_info['maximum']['num_match'];
+            current_data.dataset[1].data[2].value = struct_info['average']['file_size'] / struct_info['maximum']['file_size'];
+            current_data.dataset[1].data[3].value = struct_info['average']['coverage'] / struct_info['maximum']['coverage'];
+            current_data.dataset[1].data[4].value = struct_info['average']['MPM'] / struct_info['maximum']['MPM'];
+            radar.setChartData(current_data, "json");
+
+            // --饼状图--
+            var pie = FusionCharts("Pie");
+            var current_data = pie.getChartData("json");
+            var pie_info = result['pie_info'];
+            for (var i in pie_info) {
+                pie_info[i].label = (pie_info[i].label).split('/')[(pie_info[i].label).split('/').length - 1];
+            }
+            current_data.data = pie_info;
+            pie.setChartData(current_data, "json");
+
+
+            // --表格部分--
+            table_info = result['table_info'];
+            result_detail = table_info;
+            lastPage = Math.ceil(table_info.length / 10); // 一页显示20个, 计算出最后一页
+            console.log(lastPage);
+            $(".tcdPageCode").createPage({
+                pageCount:lastPage,
+                current:1,
+                backFn:function(p){
+                    console.log(p);
+                    currentPage = p;
+                    $("#table_info").html('');
+                    // 一开始只取前10个
+                    currenTableInfo = table_info.slice((currentPage-1)*10, currentPage*10);
+                    $.each(currenTableInfo, function (index, item) {
+                        // var li_code = "<tr data-toggle='modal'  data-target='#TableModal' onclick='showDetailMatchInfo(" + (index+(currentPage-1)*10)+ ", 1)'><td class='text-left'>" + item["name"] + "</td><td class='text-right'>" + transform(item["file_size"]) + "</td><td class='text-right'>" + item["num_match"] + "</td><td class='text-right'>" + item["MPM"] + "</td></tr>";
+                        var li_code = "<tr data-toggle='modal' onclick='readFileContent(" + (index+(currentPage-1)*10) + ");'><td class='text-left'>" + item["name"] + "</td><td class='text-right'>" + transform(item["file_size"]) + "</td><td class='text-right'>" + item["num_match"] + "</td><td class='text-right'>" + item["MPM"] + "</td></tr>";
+                        $("#table_info").append(li_code);
+                    });
+                    $("#table_result").trigger("update");  // 分页的时候更新表格排序
+                }
+            });
+
+            $("#table_info").html('');
+            // 一开始只取前10个
+            currenTableInfo = table_info.slice(0, 10);
+            $.each(currenTableInfo, function (index, item) {
+                // var li_code = "<tr data-toggle='modal'  data-target='#TableModal' onclick='showDetailMatchInfo(" + (index+10*(currentPage-1))+ ", 1)'><td class='text-left'>" + item["name"] + "</td><td class='text-right'>" + transform(item["file_size"]) + "</td><td class='text-right'>" + item["num_match"] + "</td><td class='text-right'>" + item["MPM"] + "</td></tr>";
+                var li_code = "<tr data-toggle='modal' onclick='readFileContent(" + (index+(currentPage-1)*10) + ");'><td class='text-left'>" + item["name"] + "</td><td class='text-right'>" + transform(item["file_size"]) + "</td><td class='text-right'>" + item["num_match"] + "</td><td class='text-right'>" + item["MPM"] + "</td></tr>";
+                $("#table_info").append(li_code);
+            });
+            $("#table_result").trigger("update"); 
+
+
+
+        });
+    });
+
+</script>
+
+
+<body>
+    <!--导航栏部分-->
+    <div>
+        <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar-collapse">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                    <image src="{% static 'images/bsearch-white.png' %}">
+                    <ul class="user-menu">
+                        <li class="dropdown pull-right">
+                            <a href="/history/" style="padding-right: 30px;">历史搜索</a>
+                            <a href="/" style="padding-right: 10px;">搜索</a>
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="padding-right: 30px;">
+                                <svg class="glyph stroked male-user">
+                                    <use xlink:href="#stroked-male-user"></use>
+                                </svg> 用户 <span class="caret"></span></a>
+                            <ul class="dropdown-menu" role="menu">
+                            	<!--
+                                <li>
+                                    <a href="#">
+                                        <svg class="glyph stroked male-user">
+                                            <use xlink:href="#stroked-male-user"></use>
+                                        </svg> 设置</a>
+                                </li>
+                                -->
+                                <li>
+                                    <a href="/">
+                                        <svg class="glyph stroked gear">
+                                            <use xlink:href="#stroked-gear"></use>
+                                        </svg> 退出</a>
+                                </li>
+                                <li>
+                                    <a href="#">
+                                        <svg class="glyph stroked cancel">
+                                            <use xlink:href="#stroked-cancel"></use>
+                                        </svg> 帮助</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <div class="page-content-wrapper">
+        <div class="row">
+            <div class="col-md-5">
+                <div class="portlet-left light bordered">
+                    <div class="portlet-title">
+                        <div class="caption">信息结构</div>
+                    </div>
+                    <div class="portlet-body" style="height: 500px">
+                        <div id="StarChart">FusionCharts will render here</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="portlet-right light bordered">
+                    <div class="portlet-title">
+                        <div class="caption">历史检索字符串</div>
+                    </div>
+                    <div class="portlet-body" style="height: 500px">
+                        <div id="PieChart">FusionCharts will render here</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--表格部分-->
+        <div>
+            <div class="portlet-mid light bordered">
+                <div class="portlet-title">
+                    <div class="caption">历史检索字符串</div>
+                </div>
+                <div class="portlet-body" id="chart1">
+                    <table class="sortable table table-bordered table-hover" id="table_result">
+                        <caption>创建信息表格</caption>
+                        <thead>
+                            <tr>
+                                <th style="font-size: inherit;" onselectstart="return false;">文件</th>
+                                <th style="font-size: inherit;" onselectstart="return false;">大小</th>
+                                <th style="font-size: inherit;" onselectstart="return false;">匹配数目</th>
+                                <th style="font-size: inherit;" onselectstart="return false;">MPM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table_info">
+
+                        </tbody>
+                    </table>
+                    <!--分页-->
+                    <center>
+                        <div class="tcdPageCode"></div>
+                    </center>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--模态框-->
+    <div class="modal fade" style="padding-top: 3%" id="TableModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" style="width: 100%">
+            <div class="modal-content" style="width:1000px; margin:0 auto;">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+                            &times;
+                        </button>
+                    <h4 class="modal-title" id="myModalLabel">
+                        详细信息
+                    </h4>
+                </div>
+                <div class="modal-body" style="width: 100%; padding:10px 15px;">
+                    <!--分页-->
+                    <center>
+                        <ul id="pagination1" class="pagination" style="margin:0; margin-bottom:5px;">
+
+                        </ul>
+                    </center>
+                    <table id="table_content" class="sortable table table-bordered table-hover" style="font-size: 11px; margin-bottom:0;">
+                        <thead>
+                            <tr>
+                                <th class="text-left" width="10%" style="font-size: 12px; text-align: center;">偏移量</th>
+                                <th class="text-left" width="10%" style="font-size: 12px; text-align: center;">偏移量(HEX)</th>
+                                <th class="text-left" width="20%" style="font-size: 12px; text-align: center;">十六进制</th>
+                                <th class="text-left" width="5%" style="font-size: 12px; text-align: center;">ASCII</th>
+                                <th class="text-left" width="55%" style="font-size: 12px; text-align: center;">二进制</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-modal" style="font-size:7px;font-family:Courier, monospace;">
+                        </tbody>
+                    </table>
+                    <!--分页-->
+                    <center>
+                        <ul id="pagination2" class="pagination" style="margin:0; margin-top:10px;">
+
+                        </ul>
+                    </center>
+                </div>
+                <!--
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭
+                        </button>
+                </div>
+                -->
+            </div>
+        </div>
+        </div>
+<!--表格排序-->
+<script type="text/javascript">
+    $.tablesorter.addParser({
+        id: "size",
+        is: function (s) {
+            return false;
+        },
+        format: function (s) {
+            var unit = (s.substring(s.length - 2, s.length));
+            var number = parseFloat(s.substring(0, s.length - 2));
+            if (unit == "B") {
+                return number/1024;
+            } else if(unit == "KB"){
+                return number;
+            }else if (unit == "MB") {
+                return number * 1024;
+            } else if (unit == "GB") {
+                return number * 1024 * 1024;
+            }
+        },
+        type: "numeric"
+    });
+    $("#table_result").tablesorter({ headers: { 1: { sorter: "size" }}}); 
+</script>
+</body>
+
+</html>

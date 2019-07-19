@@ -1,0 +1,363 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>bsreash</title>
+	<link rel='icon' type='image/png' href="/static/images/icons/bsearch.ico">
+
+	<script type="text/javascript" src="/static/js/jquery.min.js"></script>
+
+	<link rel="stylesheet" href="/static/bootstrap-3.3.7/css/bootstrap.min.css">
+	<script type="text/javascript" src="/static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+
+	<script type="text/javascript" src="/static/fusioncharts/sortable.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/fusioncharts.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/fusioncharts.charts.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/themes/fusioncharts.theme.fint.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/themes/fusioncharts.theme.zune.js "></script>
+    <script type="text/javascript" src="/static/fusioncharts/fusioncharts.widgets.js"></script>
+    
+    <script type="text/javascript" src="/static/js/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/js/tools.js"></script>
+	<link rel="stylesheet" href="/static/css/datepicker3.css" >
+	<link rel="stylesheet" href="/static/css/frame.css">
+	<link rel="stylesheet" href="/static/css/styles.css">
+	
+	<style>
+        .table-node-operate a{
+            margin-right:20px;
+            /* text-decoration: none;  
+            border:1px solid #3538cf;
+            padding:2px; */
+        }
+        .table-node-operate a:hover{
+            cursor: pointer;
+        }
+        #table_info td{
+            vertical-align: middle ;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <image src="/static/images/bsearch-white.png">
+                <ul class="user-menu">
+                    <li class="dropdown pull-right">
+                        <a href="#" id="additive-bt" style="padding-right: 30px;" data-toggle="modal" data-target="#AddModal">添加节点</a>
+                        <a href="#" style="padding-right: 30px;" class="dropdown-toggle" data-toggle="dropdown" >
+                            用户 <span class="caret"></span>
+                        </a>
+                        
+                        <ul class="dropdown-menu" role="menu">
+                            <li><a href="/logout/">退出</a></li>
+                            <li><a href="#">帮助</a></li>
+                            <!-- svg图标 <li><a href="#"><svg class="glyph stroked cancel"><use xlink:href=""></use></svg>帮助</a></li> -->
+                        </ul>
+                        
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- 模态框部分 -->
+    <div class="modal fade" style="padding-top: 10%" id="AddModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="addModalLabel">添加节点</h4>
+                </div>
+                <form class="form-horizontal" role="form">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="input-node-ip" class="col-sm-2 control-label">主机地址</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="input-node-ip" >
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-node-name" class="col-sm-2 control-label">主机名</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="input-node-name" >
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <div class="checkbox">
+                                    <label><input type="checkbox" id="input-node-active">是否激活</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-node-dir" class="col-sm-2 control-label">默认目录</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="input-node-dir" value="/home">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <!-- <input type="hidden" style="width: 80%;font-size: inherit" name="directory" id="directory" /> -->
+                        <button id="btn-confirm"  type="button" class="btn btn-primary">添加</button>
+                    </div>
+                </form>
+            </div>
+            
+        </div>
+    </div>
+
+	<div class="page-content-wrapper">
+		<!--图表部分-->
+		<div class="portlet-mid light bordered">
+			<div class="portlet-title"><div class="caption">集群索引创建总进度</div></div>
+			<div class="portlet-body">
+				<div id="host-all-progress">FusionCharts will render here</div>
+			</div>
+		</div>
+
+		<!--表格部分-->
+		<div>
+			<div class="portlet-mid light bordered">
+				<div class="portlet-title"><div class="caption">集群详细信息</div></div>
+				<div class="portlet-body">
+					<table class="table table-bordered table-hover">
+						<!-- <caption>创建信息表格</caption> -->
+						<thead>
+							<tr>
+                                <th onselectstart="return false;" style="width:20%">节点IP</th>
+                                <th onselectstart="return false;" style="width:20%">是否激活</th>
+                                <th onselectstart="return false;" style="width:40%">当前进度</th>
+                                <th onselectstart="return false;" style="width:20%">操作</th>
+								<!-- <th onselectstart="return false;">大小</th> -->
+							</tr>
+						</thead>
+						<tbody id="table_info">
+
+						</tbody>
+					</table>
+					<!--分页-->
+					<!-- <center><ul class="pagination" id="pagination"></ul></center> -->
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+<script>
+    var hostCache=new Set();//全局的表格对象控制（但只包含ip信息，ip信息绑定到表格的对应行上）
+    $(document).ready(function(){
+        //TODO:实际URL分配后修改页面上的href
+        //TODO:进度条还收否需要人为修改进度
+        $("#btn-confirm").click(function(){
+            var nodeIp=$("#input-node-ip").val();
+            var nodeName=$("#input-node-name").val();
+            var nodeDir=$("#input-node-dir").val();
+            var nodeHasActive=$("#input-node-active").prop("checked");
+            console.log("nodeMsg:"+nodeIp,typeof(nodeName),nodeDir,nodeHasActive);
+            if(nodeIp == "" || nodeName == "" || nodeDir == ""){
+                return alert("存在空项，请检查！");   
+            }
+            //TODO ：修改接口
+            $.post("",{
+                nodeIp:nodeIp,
+                nodeName:nodeName,
+                nodeDir:nodeDir
+            },function(){
+                alert("添加成功！");
+                $("#AddModal").modal('hide');
+            })
+        });
+        createPregressBar('all');
+        getClusterState();
+        
+    });
+    
+
+    function getClusterState() {
+        if ("WebSocket" in window) {
+            var wsUri = "ws://" + window.location.host + "/api_indexCreateStatus/";
+            var socket = new WebSocket(wsUri);
+            if (socket.readyState == WebSocket.OPEN) socket.onmessage();
+            socket.onopen = function (evt) {
+                var payload = {
+                    'type': 'distributedIndexCreateStatus',
+                }
+                socket.send(JSON.stringify(payload));
+            };
+            socket.onmessage = function (evt) {
+                if (evt.data == 'over') {
+                    console.log("socket connection over !!!");
+                    socket.close();
+                } else {
+                    var formatResult = $.parseJSON(evt.data);
+                    var tableData = formatResult["data"]["detail"];//经讨论目前不需要分页
+                    //console.log(formatResult);
+                    
+                    $.each(tableData,function(index, item){
+                        if(!hostCache.has(item["node_ip"])){
+                            hostCache.add(item["node_ip"]);
+                            //console.log(hostCache);
+                            var template="<tr id='"+item["node_ip"]+"'><td>" + item["node_ip"] + "</td><td>"+
+                                    "已激活" +"</td>" + //TODO:修改激活信息
+                                    "<td id='host-"+item["node_ip"]+"-progress'></td><td>" +
+                                    "<div class='table-node-operate'><a href=/testSingleNode?ip="+item["node_ip"]+">查看该节点信息</a>" +
+                                        "<a onclick='deleteRowInTable(this)'>删除节点</a></div></td></tr>";
+                            $("#table_info").append(template);
+                            createPregressBar(item["node_ip"],30);
+                            
+                        }
+                        //更新表格--进度条
+                        //console.log(item);
+                        let nodeSummary = item["summary"];
+                        let progressRate = (100 * nodeSummary["fileSizeCreated"] / nodeSummary["fileSizeTotal"]).toFixed(2);
+                        let progressBar = getChartFromId('progress-'+item["node_ip"]);
+                        if(progressBar == null){return ;}//异步创建时可能还未创建完成
+                        let progressData = progressBar.getChartData("json");
+                        //console.log(progressData);
+                        progressRate = realProgressBarShowRate(progressRate, progressData.value, 0.4,[50,90,99]);
+                        progressData.annotations.groups[0].items[0].text = progressRate + '%';
+                        progressData.value = progressRate;
+                        progressBar.setChartData(progressData, "json");
+                    });
+                    //更新全局进度条
+                    let progressRate = (100 * formatResult["data"]["summary"]["fileSizeCreated"] / formatResult["data"]["summary"]["fileSizeTotal"]).toFixed(2);
+                    let progressBar = getChartFromId('progress-all');
+                    let progressData = progressBar.getChartData("json");
+                    progressRate = realProgressBarShowRate(progressRate, progressData.value, 0.4,[50,90,99]);
+                    progressData.annotations.groups[0].items[0].text = progressRate + '%';
+                    progressData.value = progressRate;
+                    progressBar.setChartData(progressData, "json");
+                }
+            };
+            socket.onclose = function (evt) {
+                socket.close();
+            };
+        }else{
+            alert("您的浏览器不支持 WebSocket!");
+        }
+    }
+    function deleteRowInTable(thisNode){
+        //console.log(rowId);
+        //TODO:与后台交互
+        var trNode = $(thisNode).parents('tr');
+        var hostIp = trNode.attr("id");
+        $.post("",{
+
+        },function(){
+            hostCache.delete(hostIp);
+            $(trNode).remove();
+        })
+        
+        
+    }
+
+
+    /**
+     * 创建进度条
+     */
+    function createPregressBar(hostId,height="30"){
+        FusionCharts.ready(function () {
+            var chargePercent = 0,
+                flag = 0,
+                count = 0,
+                chart = new FusionCharts({
+                    type: 'hled',
+                    showBorder: '0',
+                    renderAt: 'host-'+hostId+'-progress',
+                    id: 'progress-'+hostId,
+                    width: '100%',  // 动态调整进度条长度
+                    height: height,
+                    dataFormat: 'json',
+                    bgImage: "../icons/bsearch-small.png",
+                    bgImageAlpha: "0",
+                    dataSource: {
+                        "value": "0",
+                        "chart": {
+                            "caption": "",//"0110100000011110101001011110....1110011111111111111", //  set to the string user searched
+                            "subcaption": "",//"耗时 21.32 秒，匹配到12个文件，289项记录", //  update this when new data available 
+                            "lowerLimit": "0",
+                            "upperLimit": "50", // should be the total file size
+                            "useSameFillColor": "1",
+                            "showGaugeBorder": "0",
+                            "canvasleftmargin": "0",
+                            "chartTopMargin": "0",
+                            "chartBottomMargin": "-3",
+                            "chartLeftMargin": "0",
+                            "chartRightMargin": "0",
+                            "numberSuffix": " TB", // Set TB or GB or MB according to the actual file size
+                            "captionFontSize": "24",
+                            "subcaptionFontSize": "16",
+                            //Add hover effect
+                            "showhovereffect": "1",
+                            "animation": "0",
+
+                            "theme": "fint",
+                            "showValue": "0",
+                            "showTickMarks": "0",
+                            "ledSize": "1",
+                            "ledGap": "0"
+                        },
+                        "annotations": {
+                            "groups": [{
+                                    //Each group needs a unique ID
+                                    "id": "remainingTime",
+                                    "showbelow": "0",
+                                    "items": [{
+                                            "id": "remainingTxt2",
+                                            //Polygon item 
+                                            "type": "text",
+                                            "text": "",
+                                            "fontColor": "#FFFFFF",
+                                            "fontSize": "18",
+                                            "bold": "1",
+                                            "x": "$gaugeCenterX",
+                                            "y": "$gaugeCenterY",
+                                    }]
+                            }]
+
+                        },
+
+                        "colorRange": {
+                            "color": [ // set those minValue and maxValue according to the actual total file size
+                                {
+                                    "minValue": "0",
+                                    "maxValue": "4",
+                                    "code": "#999999"
+                                },
+                                {
+                                    "minValue": "4",
+                                    "maxValue": "20",
+                                    "code": "#FF2020",
+                                },
+                                {
+                                    "minValue": "20",
+                                    "maxValue": "40",
+                                    "code": "#C04a00"
+                                },
+                                {
+                                    "minValue": "40",
+                                    "maxValue": "70",
+                                    "code": "#E09900"
+                                },
+                                {
+                                    "minValue": "70",
+                                    "maxValue": "90",
+                                    "code": "#6baa01"
+                                },
+                                {
+                                    "minValue": "90",
+                                    "maxValue": "100", //this is the total file size to be searched, other values scale accordingly
+                                    "code": "#30ca30"
+                                },
+                            ]
+                        }
+                        
+                    },
+            }).render();
+        
+        });
+    }
+	
+</script>
+</html>

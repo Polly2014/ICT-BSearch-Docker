@@ -1,0 +1,698 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>bsreash</title>
+	<link rel='icon' type='image/png' href="/static/images/icons/bsearch.ico">
+
+	<script type="text/javascript" src="/static/js/jquery.min.js"></script>
+
+	<link rel="stylesheet" href="/static/bootstrap-3.3.7/css/bootstrap.min.css">
+	<script type="text/javascript" src="/static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+
+	<script type="text/javascript" src="/static/fusioncharts/sortable.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/fusioncharts.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/fusioncharts.charts.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/themes/fusioncharts.theme.fint.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/themes/fusioncharts.theme.zune.js "></script>
+	<script type="text/javascript" src="/static/fusioncharts/fusioncharts.widgets.js"></script>
+
+	<script type="text/javascript" src="/static/js/jquery.tablesorter.min.js"></script>
+	<script type="text/javascript" src="/static/js/tools.js"></script>
+	<link rel="stylesheet" href="/static/css/datepicker3.css">
+	<link rel="stylesheet" href="/static/css/frame.css">
+	<link rel="stylesheet" href="/static/css/styles.css">
+	
+	<style>
+		tr:hover {
+			cursor: pointer
+		}
+
+		.page-content-wrapper {
+			overflow-x: hidden;
+		}
+		#browser_content {
+			margin-top: 10px;
+		}
+
+		#ul_browser {
+			width: 100%;
+			height: auto;
+			border: 1px solid #CCC;
+			list-style: none;
+			padding: 0;
+		}
+
+		#ul_browser li {
+			width: 100%;
+			cursor: pointer;
+			border: 1px solid transparent;
+			text-align: left;
+			padding-left: 22px;
+			background-image: url("/static/images/directory-small.png");
+			background-size: auto 100%;
+			background-repeat: no-repeat;
+		}
+
+		#ul_browser li:hover {
+			cursor: pointer;
+			border: 1px solid #66a7e8;
+			background: #e5f3fb;
+			background-image: url("/static/images/directory-small.png");
+			background-size: auto 100%;
+			background-repeat: no-repeat;
+		}
+
+		.highlight {
+			border: 1px solid #66a7e8;
+			background: #d1e8ff;
+		}
+		.host-message{
+			padding-bottom: 10px;
+		}
+	</style>
+</head>
+
+<body>
+	<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<image src="/static/images/bsearch-white.png">
+				<ul class="user-menu">
+					<li class="dropdown pull-right">
+						<a href="/testCluster" id="return-bt" style="padding-right: 30px;">返回集群管理</a>
+						<a href="#" id="additive-bt" style="padding-right: 30px;" data-toggle="modal" data-target="#AddModal">添加索引</a>
+						<a href="#" style="padding-right: 30px;" class="dropdown-toggle" data-toggle="dropdown" >
+							用户 <span class="caret"></span>
+						</a>
+						
+						<ul class="dropdown-menu" role="menu">
+							<li><a href="/logout/">退出</a></li>
+							<li><a href="#">帮助</a></li>
+							<!-- svg图标 <li><a href="#"><svg class="glyph stroked cancel"><use xlink:href=""></use></svg>帮助</a></li> -->
+						</ul>
+						
+					</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+
+	<!-- 模态框（Modal） -->
+	<div class="modal fade" style="padding-top: 10%" id="AddModal" tabindex="-1" role="dialog"
+		aria-labelledby="addModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title" id="addModalLabel">添加索引目录</h4>
+				</div>
+				<form id="form_addition" name="form_addition" action="/directoryAddition/" method="POST">
+					<div class="modal-body">
+						<div id="browser_head">
+							<span style="width: 20%;">当前主机：</span>
+							<span class="host-message-ip" style="width:80%;"></span>
+							<br />
+							<!-- 
+							<select name="currentHost" id="currentHost">
+								<option value="192.168.0.2">192.168.0.2</option>
+								<option value="192.168.0.3">192.168.0.3</option>
+							</select> -->
+							<span style="width: 20%;">当前目录：</span>
+							<span id="currentPath" style="width:80%;"></span>
+						</div>
+						<div id="browser_content">
+							<ul id="ul_browser">
+								<li>a</li>
+								<li>b</li>
+							</ul>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<input type="hidden" style="width: 80%;font-size: inherit" name="directory" id="directory" />
+						<button id="btn_confirm" onclick="getTotalPath();" disabled="disabled" type="button"
+							class="btn btn-primary">添加</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<div class="page-content-wrapper">
+		<!--已完成：基础信息与图表部分-->
+		<div class="row">
+			<div class="col-md-4 col-sm-12">
+				<div class="portlet-left light bordered">
+					<div class="portlet-title"><div class="caption">节点信息</div></div>
+					<div class="portlet-body">
+						<div class="host-message">节点IP：<span class="host-message-ip "></span></div>
+						<div class="host-message">本节点已完成创建的索引数：<span id="host-message-created" ></span></div>
+						<div class="host-message">本节点正在创建的索引数：<span id="host-message-creating" ></span></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-md-8 col-sm-12">
+				<div class="portlet-right light bordered">
+					<div class="portlet-title"><div class="caption">平均创建速度</div></div>
+					<div class="portlet-body">
+						<div id="chart-created">FusionCharts will render here</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--已完成：表格部分-->
+		<div class="portlet-mid light bordered">
+			<div class="portlet-title"><div class="caption">详细信息</div></div>
+			<div class="portlet-body" id="chart1">
+				<table class="table table-bordered table-hover" id="table-created">
+					<!-- <caption>创建信息表格</caption> -->
+					<thead>
+						<tr>
+							<th width="45%" onselectstart="return false;">目录</th>
+							<th width="6%" onselectstart="return false;">文件数目</th>
+							<th width="6%"onselectstart="return false;">大小</th>
+							<th width="14%"onselectstart="return false;">创建时间</th>
+							<th width="14%"onselectstart="return false;">完成时间</th>
+							<th width="7%"onselectstart="return false;">总计用时</th>
+							<th width="8%"onselectstart="return false;">平均速度</th>
+						</tr>
+					</thead>
+					<tbody id="created-table-info"></tbody>
+				</table>
+				<!-- <center><ul class="pagination" id="pagination"></ul></center> -->
+			</div>
+		</div>
+
+		<!--正在创建：图表部分-->
+		<div class="row">
+			<div class="col-md-6 col-sm-12">
+				<div class="portlet-left light bordered" id="chart-1">
+					<div class="portlet-title"><div class="caption">【正在创建索引】创建总进度</div></div>
+					<div class="portlet-body" style="height: 105px;">
+						<div id="chart-creating-progress-all">FusionCharts will render here</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-md-6 col-sm-12">
+				<div class="portlet-right light bordered" id="chart2">
+					<div class="portlet-title"><div class="caption">【正在创建索引】创建速度</div></div>
+					<div class="portlet-body" style="height: 105px;">
+						<div id="chart-creating-speed-all">FusionCharts will render here</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<!--正在创建：表格部分-->
+		<div class="portlet-mid light bordered">
+			<div class="portlet-title"><div class="caption">【正在创建索引】创建信息</div></div>
+			<div class="portlet-body">
+				<table class="sortable table table-bordered table-hover" align="center" style="width:100%">
+					<!-- <caption>创建信息表格</caption> -->
+					<thead>
+						<tr>
+							<th class="text-left" width="16%" onselectstart="return false;">目录</th>
+							<th class="text-left" width="9%" onselectstart="return false;">文件数</th>
+							<th class="text-left" width="9%" onselectstart="return false;">文件大小</th>
+							<th class="text-left" width="15%" onselectstart="return false;">创建时间</th>
+							<th class="text-left" width="8%" onselectstart="return false;">已用时间</th>
+							<th class="text-left" width="20%" onselectstart="return false;">速度</th>
+							<th class="text-left" width="20%" onselectstart="return false;">进度</th>
+						</tr>
+					</thead>
+					<tbody class="table-hover" id="creating-table-info">
+
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+
+
+
+</body>
+<script>
+var currentHostIP=null;
+var finishedDataLength=0;
+var unfinishedData = new Set();
+$(document).ready(function(){
+	//TODO:检查实际URL下的href
+	currentHostIP=getUrlParam("ip");
+	$(".host-message-ip").text(currentHostIP);
+	//全局图表
+	createColumnChart();
+	createProgressBar("all","30","60");
+	createSparkline("all","95");
+	showDirectoryInfo();
+	
+	/**
+	 * 表格排序 
+	 */
+	$.tablesorter.addParser({
+        id: "size",
+        is: function (s) {return false;},
+        format: function (s) {
+            var unit = (s.substring(s.length - 2, s.length));
+            var number = parseFloat(s.substring(0, s.length - 2));
+            if (unit == "KB"){
+                return number;
+            }else if (unit == "MB") {
+                return number * 1024;
+            } else if (unit == "GB") {
+                return number * 1024 * 1024;
+            }
+        },
+        type: "numeric"
+    });
+
+    $.tablesorter.addParser({
+        id: "speed",
+        is: function (s) {return false;},
+        format: function (s) {
+            var unit = (s.substring(s.length - 4, s.length));
+            var number = parseFloat(s.substring(0, s.length - 4));
+            return number;
+        },
+        type: "numeric"
+    });
+	getClusterState();
+});
+
+
+function getClusterState() {
+    if ("WebSocket" in window) {
+        var wsUri = "ws://" + window.location.host + "/api_indexCreateStatus/";
+        var socket = new WebSocket(wsUri);
+        if (socket.readyState == WebSocket.OPEN) socket.onmessage();
+        socket.onopen = function (evt) {
+            var payload = {
+                'type': 'distributedIndexCreateStatus',
+            }
+            socket.send(JSON.stringify(payload));
+        };
+        socket.onmessage = function (evt) {
+            if (evt.data == 'over') {
+                console.log("socket connection over !!!");
+                socket.close();
+            } else {
+				var formatResult = $.parseJSON(evt.data);
+				var hostList = formatResult["data"]["detail"];
+				var hostData = null;
+				for(let i=0;i<hostList.length;i++){
+					if(hostList[i]["node_ip"] == currentHostIP){hostData=hostList[i];}
+				}
+				if(hostData == null){
+					alert("主机数据异常，返回集群首页");
+					$(window).attr('location','/testCluster');
+					return ;
+				}
+				//console.log(hostData);
+				var finishedTableData = hostData["detail"]["finished"];
+				var unfinishedTableData = hostData["detail"]["unfinished"];
+				$("#host-message-created").text(finishedTableData.length);
+				$("#host-message-creating").text(unfinishedTableData.length);
+
+				//【已完成创建】表格 -- 目前系统没有显式提供删除索引的接口，所以采用判断记录数来判断是否更新表格
+				if(finishedTableData.length != finishedDataLength){
+					finishedDataLength=finishedTableData.length;
+					$("#created-table-info").empty();
+					$.each(finishedTableData,function(index, item){
+						var template = "<tr><td>" + item["name"] + "</td><td>" +
+									item["fileNumTotal"] + "</td><td>" +
+									transform(item["fileSizeTotal"]) + "</td><td>" +
+									item["timeCreated"] + "</td><td>" +
+									item["timeFinished"] + "</td><td>" +
+									item["timeWasted"] + "</td><td>" +
+									item["rate"] + "MB/s</td></tr>";
+				    	$("#created-table-info").append(template);
+					});
+					$("#table-created").tablesorter({ headers: { 2: { sorter: "size" }, 6:{sorter:"speed"} } }); 
+				}
+				
+				//【已完成创建】柱状图
+				let barChartData=[];
+				let barChartLen= (finishedTableData.length-15>=0)?finishedTableData.length-15:0;
+				for(let i=finishedTableData.length-1;i>=barChartLen;i--){
+					barChartData.push({"label": finishedTableData[i]["name"], "value": finishedTableData[i]["rate"]});
+				}
+				let barChart = getChartFromId('averageRate');
+				let barChartFormatData = barChart.getChartData("json"); // 获取当前图表上的数据
+				barChartFormatData.data = barChartData
+				barChart.setChartData(barChartFormatData, "json");
+				
+				//【正在创建】进度条
+				let progressBarData = (100 * hostData["summary"]["fileSizeCreated"] / hostData["summary"]["fileSizeTotal"]).toFixed(2);
+				let progressBarAll = getChartFromId('progress-all');
+				let progressBarFormatData = progressBarAll.getChartData("json");  // 当前的百分比
+				progressBarData = realProgressBarShowRate(progressBarData, progressBarFormatData.value, 0.15,[25,50,75,99]);
+				let strText = transform(hostData["summary"]["fileSizeCreated"]) + '/' + transform(hostData["summary"]["fileSizeTotal"]) + '(' + progressBarData + '%)';//更新进度条的数据
+				progressBarFormatData.annotations.groups[0].items[0].text = strText;
+				progressBarFormatData.value = progressBarData;
+				progressBarAll.setChartData(progressBarFormatData, "json");
+
+				//【正在创建】折线速度图
+				let sparklineAll = getChartFromId('sparkline-all');
+				let sparklineFormatData = sparklineAll.getChartData("json"); // 获取当前的数据
+				sparklineFormatData.dataset[0].data.shift();
+				let speedRate = (hostData["summary"]["rate"] == "--")?{value: "0"}:{value: hostData["summary"]["rate"]};
+				sparklineFormatData.dataset[0].data.push(speedRate);
+				sparklineAll.setChartData(sparklineFormatData, "json");
+				
+				//【正在创建】表格
+				//TODO:未测试
+				if(unfinishedTableData.length>0){//存在数据
+					let refreshSet =new Set();
+					for(let object in unfinishedTableData){
+						let originName = (object.name);
+                        let formatName = "";
+                        for (let idx in originName) {
+                            formatName += originName[idx].charCodeAt();
+                        }
+						object.originName = originName;
+                        object.name = formatName;
+						refreshSet.add(object);
+					}
+					
+					//求refreshSet差unfinishedData的集合（需要新增的部分）
+					let needToAddSet = new Set([...refreshSet].filter(x => !unfinishedData.has(x)));
+					for(let object in needToAddSet){
+						let rowTemplate = "<tr id='"+ object["name"] +"'><td>" + object["originName"] +
+							"</td><td id='"+ object["name"] +"-num'>" + object["fileNumCreated"] + "/" + object["fileNumTotal"] + 
+							"</td><td id='"+ object["name"] +"-size'>" + transform(object["fileSizeCreated"]) + "/" + transform(object["fileSizeTotal"]) + 
+							"</td><td>"+ object["timeCreated"] + 
+							"</td><td id='"+ object["name"] +"-time'>" + object["timeWasted"] + 
+							"</td><td><div id='chart-creating-speed-"+ object["name"] +"'></div></td><td><div id='chart-creating-progress-" + object["name"] + "'></div></td></tr>";
+						$("#creating-table-info").append(rowTemplate);
+						
+						createSparkline(object["name"]);
+						createProgressBar(object["name"]);
+					}
+
+					//求unfinishedData差refreshSet的集合（需要删除的部分）
+					let needToDeleteSet = new Set([...refrunfinishedDataeshSet].filter(x => !refreshSet.has(x)));
+					for(let object in needToDeleteSet){
+						$("#"+object["name"]).remove();
+					}
+					//求交集（不需要更新UI的部分）（只更新交集的数据并不好）
+					//let intersectionSet = new Set([...refreshSet].filter(x => unfinishedData.has(x)));
+					//直接更新refreshSet的中对象的数据
+					for(let object in refreshSet){
+						//表格基础数据更新
+						$("#" + object["name"]+ "-num").html(object["fileNumCreated"] + "/" + object["fileNumTotal"]);
+						$("#" + object["name"]+ "-size").html(transform(object["fileSizeCreated"]) + "/" + transform(object["fileSizeTotal"]));
+						$("#" + object["name"]+ "-time").html(object["timeWasted"]);
+						//更新速度
+						let sparklineAll = getChartFromId('sparkline-'+object["name"]);
+						let sparklineFormatData = sparklineAll.getChartData("json"); // 获取当前的数据
+						sparklineFormatData.dataset[0].data.shift();
+						let speedRate = (object["rate"] == "--")?{value: "0"}:{value: object["rate"]};
+						sparklineFormatData.dataset[0].data.push(speedRate);
+						sparklineAll.setChartData(sparklineFormatData, "json");
+						//更新进度
+						let progressBarData = (100 * object["fileSizeCreated"] / object["fileSizeTotal"]).toFixed(2);
+						let progressBarAll = getChartFromId('progress-'+object["name"]);
+						let progressBarFormatData = progressBarAll.getChartData("json");  // 当前的百分比
+						progressBarData = realProgressBarShowRate(progressBarData, progressBarFormatData.value, 0.4,[50,90,99]);
+						let strText =  progressBarData + '%';//更新进度条的数据
+						progressBarFormatData.annotations.groups[0].items[0].text = strText;
+						progressBarFormatData.value = progressBarData;
+						progressBarAll.setChartData(progressBarFormatData, "json");
+
+					}
+
+
+				}else{
+					$("#creating-table-info").empty();
+				}
+
+            }
+        };
+        socket.onclose = function (evt) {
+            socket.close();
+        };
+    }else{
+        alert("您的浏览器不支持 WebSocket!");
+    }
+}
+
+/**
+  * 添加索引部分函数
+  * selectItem():通过class的添加与删除达到需创建的路径的选择
+  * getTotalPath():提交创建索引request[form post] 【TODO】需测试是否存在未点击的BUG？
+  * showDirectoryInfo():更新Model中当前路径下的目录信息[ajax post] 【TODO】是否需要提交当前主机IP这个参数
+  */
+function selectItem(which){
+    $(which).parent().children("li").removeClass("highlight");
+    $(which).addClass("highlight");
+    console.log($(which).html());
+    if($(which).html()==".."){
+        $("#btn_confirm").attr("disabled", true);
+    }else{
+        $("#btn_confirm").attr("disabled", false);
+    }
+}
+
+function getTotalPath(){
+    var current_path = $("#currentPath").html();
+    var current_dir = $("li.highlight").html();
+    var totalPath = current_path+'/'+current_dir;
+
+    console.log(totalPath);
+    $("#directory").val(totalPath);
+    $("#form_addition").submit();
+}
+
+function showDirectoryInfo(currentPath=""){
+    $.post("/api_getDirectoryBrowserInfo/", {"currentPath":currentPath}, function(data){
+        // console.log(data);
+        // console.log(typeof(data));
+        // var browser_info = $.parseJSON(data);
+        var browser_info = data["data"];
+        var current_path = browser_info["dir_current"];
+        var directory_list = browser_info["dir_list"];
+
+        $("#currentPath").html(current_path);
+        $("#ul_browser").html("");
+        $.each(directory_list, function(index,item){
+            var li_code = '<li onclick="selectItem(this);" ondblclick="showDirectoryInfo(\''+item["link"]+'\');">'+item["name"]+'</li>';
+            $("#ul_browser").append(li_code);
+        });
+    });
+    console.log("Show directory Info Success.")
+};
+
+/**
+ * FusionCharts表格的render
+ * 
+ */
+
+//折线图
+function createSparkline(suffixId,_height="40"){
+	FusionCharts.ready(function () {
+		var stockPriceChart = new FusionCharts({
+			type: 'sparkline',
+			id: 'sparkline-'+suffixId,
+			renderAt: 'chart-creating-speed-'+suffixId,
+			width: "100%",
+			height: _height,
+			dataFormat: 'json',
+			dataSource: {
+				"chart": {
+					"theme": "fint",
+					"numberPrefix": " ",
+					"bgColor": "#FFFFFF", // for odd. for even, should be "#FFFFFF"
+
+					// Only show the latest anchor&number
+					"anchorRadius": "3",
+					"showHighAnchor": "0",
+					"showOpenAnchor": "0",
+					"showLowAnchor": "0",
+					"showopenvalue": "0",
+					"showHighLowValue": "0",
+
+					// Font and line
+					"linethickness": "2",
+					"baseFontSize": "18",
+					"chartBottomMargin": "0",
+					"animation": "0",
+				},
+				"dataset": [{
+						"data": [
+							{ "value": "0" },{ "value": "0" },{ "value": "0" },{ "value": "0" },
+							{ "value": "0" },{ "value": "0" },{ "value": "0" },{ "value": "0" },
+							{ "value": "0" },{ "value": "0" },{ "value": "0" },{ "value": "0" },
+							{ "value": "0" },{ "value": "0" },{ "value": "0" },{ "value": "0" },
+							{ "value": "0" },{ "value": "0" },{ "value": "0" },{ "value": "0" },
+							{ "value": "0" },{ "value": "0" },{ "value": "0" },{ "value": "0" },
+							{ "value": "0" },{ "value": "0" },{ "value": "0" },{ "value": "0" },
+							{ "value": "0" },{ "value": "0" }
+						]
+				}]
+			}
+		}).render();
+	});
+}
+
+//进度条
+function createProgressBar(suffixId,_topMargin="0",_height="40"){
+	FusionCharts.ready(function () {
+	var chargePercent = 0,
+		flag = 0,
+		count = 0,
+		chart = new FusionCharts({
+			type: 'hled',
+			showBorder: '0',
+			renderAt: 'chart-creating-progress-'+suffixId,
+			id: "progress-"+suffixId,
+			width: '100%',
+			height: _height,
+			dataFormat: 'json',
+			bgImage: "../icons/bsearch-small.png",
+			bgImageAlpha: "0",
+			dataSource: {
+				"value": "0",
+				"chart": {
+					"caption": "",//"0110100000011110101001011110....1110011111111111111", //  set to the string user searched
+					"subcaption": "",//"耗时 21.32 秒，匹配到12个文件，289项记录", // update this when new data available 
+					"lowerLimit": "0",
+					"upperLimit": "50", // should be the total file size
+					"useSameFillColor": "1",
+					"showGaugeBorder": "0",
+					"canvasleftmargin": "0",
+					"chartTopMargin": _topMargin,
+					"chartBottomMargin": "-3",
+					"chartLeftMargin": "0",
+					"chartRightMargin": "0",
+					"numberSuffix": " TB", //Set TB or GB or MB according to the actual file size
+					"captionFontSize": "24",
+					"subcaptionFontSize": "16",
+					//Add hover effect
+					"showhovereffect": "0", //总进度条不需要hover效果
+					"animation": "0",
+					"theme": "fint",
+					"showValue": "0",
+					"showTickMarks": "0",
+					"ledSize": "1",
+					"ledGap": "0"
+				},
+				"annotations": {
+					"groups": [{
+							//Each group needs a unique ID
+							"id": "remainingTime",
+							"showbelow": "0",
+							"items": [{
+									"id": "remainingTxt2",
+									//Polygon item 
+									"type": "text",
+									"text": "",
+									"fontColor": "#FFFFFF",
+									"fontSize": "18",
+									"bold": "1",
+									"x": "$gaugeCenterX",
+									"y": "$gaugeCenterY",
+							}]
+					}]
+				},
+				"colorRange": {
+					"color": [ //set those minValue and maxValue according to the actual total file size
+						{
+							"minValue": "0",
+							"maxValue": "4",
+							"code": "#999999"
+						},
+						{
+							"minValue": "4",
+							"maxValue": "20",
+							"code": "#FF2020",
+						},
+						{
+							"minValue": "20",
+							"maxValue": "40",
+							"code": "#C04a00"
+						},
+						{
+							"minValue": "40",
+							"maxValue": "70",
+							"code": "#E09900"
+						},
+						{
+							"minValue": "70",
+							"maxValue": "90",
+							"code": "#6baa01"
+						},
+						{
+							"minValue": "90",
+							"maxValue": "100", // this is the total file size to be searched, other values scale accordingly
+							"code": "#30ca30"
+						}
+					]
+				}
+				
+			},
+
+		}).render();
+	});
+}
+
+
+//【创建完成】创建平均创建速度
+function createColumnChart(){
+	FusionCharts.ready(function () {
+		var revenueChart = new FusionCharts({
+			id: 'averageRate',
+			type: 'column2d',
+			renderAt: 'chart-created',
+			width: '100%',
+			height: '400',
+			dataFormat: 'json',
+			dataSource: {
+				"chart": {
+					"caption": "最近的15个文件",
+					"subCaption": "创建速度",
+					"xAxisName": "文件序号",
+					"yAxisName": "平均速度",
+					"numberPrefix": "",
+					"paletteColors": "#0075c2",
+					"bgColor": "#ffffff",
+					"borderAlpha": "20",
+					"canvasBorderAlpha": "0",
+					"usePlotGradientColor": "0",
+					"plotBorderAlpha": "10",
+					"placevaluesInside": "1",
+					"rotatevalues": "1",
+					"valueFontColor": "#ffffff",
+					"showXAxisLine": "1",
+					"xAxisLineColor": "#999999",
+					"divlineColor": "#999999",
+					"divLineIsDashed": "1",
+					"showAlternateHGridColor": "0",
+					"subcaptionFontBold": "0",
+					"subcaptionFontSize": "14",
+					"animation": "0",
+					"numdisplaysets": "15", // 展示的bar的数目
+				},
+				"data": [],
+				"trendlines": [{
+					"line": [{
+							"startvalue": "7000000",
+							"color": "#1aaf5d",
+							"valueOnRight": "1",
+							"displayvalue": "历史平均创建速度"
+					}]
+				}]
+			}
+		}).render();
+	});
+}
+
+
+</script>
+
+</html>
