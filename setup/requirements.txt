@@ -12,7 +12,7 @@ redis==2.10.5
 six==1.10.0
 Twisted==19.2.1
 txaio==2.6.1
-uWSGI==2.0.14
-zope.interface==4.3.3
-numpy==1.13.1
+uWSGI
+zope.interface
+numpy
 requests==2.22.0
