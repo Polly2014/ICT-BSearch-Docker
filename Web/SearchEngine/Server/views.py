@@ -400,11 +400,11 @@ def indexCreate(request):
 		node_ip = request.POST.get('nodeIP', '')
 		result = plugins.distributedIndexCreate(directory_string, node_ip)
 		if result['code']==0:
-			return HttpResponseRedirect('/dashboard/')
+			return HttpResponseRedirect('/testSingleNode/?ip='+node_ip)
 		else:
-			return HttpResponseRedirect('/dashboard/')
+			return HttpResponseRedirect('/testSingleNode/?ip='+node_ip)
 	else:
-		return HttpResponseRedirect('/dashboard/')
+		return HttpResponseRedirect('/testSingleNode/?ip='+node_ip)
 
 @csrf_exempt
 def indexSearch(request):
