@@ -1490,3 +1490,26 @@ def getRemoteBlockContent(_node_ip, _uri, _start, _length):
 	pay_load = {'_uri':_uri, '_start':_start, '_length':_length}
 	r = requests.post(node_url, data=pay_load)
 	return r.json()
+
+def api_addNodeInfo(hostIP, hostName, hostIsAlive, hostDefaultDirectory):
+	result = {'code':1, 'message':'Add Host Info Success!'}
+	try:
+		if len(NodeInfo.objects.filter(node_ip=hostIP)):
+			result['message'] = "Host Already Exist"
+		else:
+			node = NodeInfo(node_ip=NodeIP, node_name=hostName, node_alive=hostIsAlive, node_active=True)
+			node.save()
+			result['code'] = 0
+	except Exception, e:
+		result['message'] = "Something Wrong: {}-{}".format(Exception, e)
+	return result
+
+def api_deleteNodeInfo(hostIP):
+	result = {'code':1, 'message':'Delete Host Info Success!'}
+	node_query_set = NodeInfo.objects.filter(node_ip=hostIP)
+	if len(node_query_set):
+		node_query_set.delete()
+		result['code'] = 0
+	else:
+		result['message'] = 'Host not Exist'
+	return result
