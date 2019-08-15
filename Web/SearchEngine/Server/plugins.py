@@ -1497,7 +1497,7 @@ def api_addNodeInfo(hostIP, hostName, hostIsAlive, hostDefaultDirectory):
 		if len(NodeInfo.objects.filter(node_ip=hostIP)):
 			result['message'] = "Host Already Exist"
 		else:
-			node = NodeInfo(node_ip=NodeIP, node_name=hostName, node_alive=hostIsAlive, node_active=True)
+			node = NodeInfo(node_ip=hostIP, node_name=hostName, node_alive=hostIsAlive, node_active=True)
 			node.save()
 			result['code'] = 0
 	except Exception, e:
