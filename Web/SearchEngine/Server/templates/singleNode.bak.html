@@ -247,7 +247,7 @@
 <script>
 var currentHostIP=null;
 var finishedDataLength=0;
-var unfinishedDataMap = new Map();
+var unfinishedData = new Set();
 $(document).ready(function(){
 	
 	currentHostIP=getUrlParam("ip");
@@ -354,19 +354,14 @@ function getClusterState() {
 				barChart.setChartData(barChartFormatData, "json");
 				
 				//【正在创建】进度条
-				let progressBarAllData = (100 * hostData["summary"]["fileSizeCreated"] / hostData["summary"]["fileSizeTotal"])*100/100;//保留两位小数且类型为number
+				let progressBarData = (100 * hostData["summary"]["fileSizeCreated"] / hostData["summary"]["fileSizeTotal"]).toFixed(2);
 				let progressBarAll = getChartFromId('progress-all');
-				let progressBarAllFormatData = progressBarAll.getChartData("json");  // 当前的百分比对象
-				console.log("type检查："+typeof(progressBarAllData)+","+typeof(progressBarAllFormatData.value));
-				console.log("已创建："+hostData["summary"]["fileSizeCreated"] +"，总计："+hostData["summary"]["fileSizeTotal"]);
-				console.log("before rate update:"+progressBarAllData+","+progressBarAllFormatData.value);
-				let allShowData = parseFloat(realProgressBarShowRate(progressBarAllData, parseFloat(progressBarAllFormatData.value), 0.15,[25,50,75,99])).toFixed(2);
-				console.log("after rate update:"+allShowData+"[type]"+typeof(allShowData));
-
-				let allShowText = transform(hostData["summary"]["fileSizeCreated"]) + '/' + transform(hostData["summary"]["fileSizeTotal"]) + '(' + allShowData + '%)';//更新进度条的数据
-				progressBarAllFormatData.annotations.groups[0].items[0].text = allShowText;
-				progressBarAllFormatData.value = allShowData;
-				progressBarAll.setChartData(progressBarAllFormatData, "json");
+				let progressBarFormatData = progressBarAll.getChartData("json");  // 当前的百分比
+				progressBarData = realProgressBarShowRate(progressBarData, progressBarFormatData.value, 0.15,[25,50,75,99]);
+				let strText = transform(hostData["summary"]["fileSizeCreated"]) + '/' + transform(hostData["summary"]["fileSizeTotal"]) + '(' + progressBarData + '%)';//更新进度条的数据
+				progressBarFormatData.annotations.groups[0].items[0].text = strText;
+				progressBarFormatData.value = progressBarData;
+				progressBarAll.setChartData(progressBarFormatData, "json");
 
 				//【正在创建】折线速度图
 				let sparklineAll = getChartFromId('sparkline-all');
@@ -377,97 +372,68 @@ function getClusterState() {
 				sparklineAll.setChartData(sparklineFormatData, "json");
 				
 				//【正在创建】表格
-				//console.log(unfinishedTableData);
+				//TODO:未测试
 				if(unfinishedTableData.length>0){//存在数据
-					//利用此次json的unfinished列表构建集合refreshMap
-					let refreshMap =new Map();
-					for(let i = 0 ; i < unfinishedTableData.length ; i ++ ){
-						unfinishedTableData[i].originName = unfinishedTableData[i].name ;
-						//为符合标签命名原则：将所有字符转换为Unicode码
-						let unicodeStr="";
-						let originStr = unfinishedTableData[i].name;
-						let len = unfinishedTableData[i].name.length;
-						
-						for(let i=0; i<len; i++){
-							unicodeStr = unicodeStr + originStr.charCodeAt(i).toString();
-						}
-						unfinishedTableData[i].name = unicodeStr;
-						console.log("new string:"+unfinishedTableData[i].name);
-						refreshMap.set(unfinishedTableData[i].name,unfinishedTableData[i]);
+					let refreshSet =new Set();
+					for(let object in unfinishedTableData){
+						let originName = (object.name);
+                        let formatName = "";
+                        for (let idx in originName) {
+                            formatName += originName[idx].charCodeAt();
+                        }
+						object.originName = originName;
+                        object.name = formatName;
+						refreshSet.add(object);
 					}
 					
-					//比较上次的缓存unfinishedDataMap集合和本次的数据集合refreshMap
-					// console.log('unfinishedDataMap:');
-					// console.log(unfinishedDataMap);
-					// console.log('refreshMap:');
-					// console.log(refreshMap);
-					//求refreshMap差unfinishedDataMap的集合,并转换为list（需要新增的部分）
-					refreshMap.forEach(function(value, key) {
-						if(!unfinishedDataMap.has(value["name"])){
-							let rowTemplate = "<tr id='"+ value["name"] +"'><td>" + value["originName"] +
-							"</td><td id='"+ value["name"] +"-num'>" + value["fileNumCreated"] + "/" + value["fileNumTotal"] + 
-							"</td><td id='"+ value["name"] +"-size'>" + transform(value["fileSizeCreated"]) + "/" + transform(value["fileSizeTotal"]) + 
-							"</td><td>"+ value["timeCreated"] + 
-							"</td><td id='"+ value["name"] +"-time'>" + value["timeWasted"] + 
-							"</td><td><div id='chart-creating-speed-"+ value["name"] +"'></div></td><td><div id='chart-creating-progress-" + value["name"] + "'></div></td></tr>";
-							$("#creating-table-info").append(rowTemplate);
-							
-							createSparkline(value["name"]);
-							createProgressBar(value["name"]);
-							
-						}
-					});
+					//求refreshSet差unfinishedData的集合（需要新增的部分）
+					let needToAddSet = new Set([...refreshSet].filter(x => !unfinishedData.has(x)));
+					for(let object in needToAddSet){
+						let rowTemplate = "<tr id='"+ object["name"] +"'><td>" + object["originName"] +
+							"</td><td id='"+ object["name"] +"-num'>" + object["fileNumCreated"] + "/" + object["fileNumTotal"] + 
+							"</td><td id='"+ object["name"] +"-size'>" + transform(object["fileSizeCreated"]) + "/" + transform(object["fileSizeTotal"]) + 
+							"</td><td>"+ object["timeCreated"] + 
+							"</td><td id='"+ object["name"] +"-time'>" + object["timeWasted"] + 
+							"</td><td><div id='chart-creating-speed-"+ object["name"] +"'></div></td><td><div id='chart-creating-progress-" + object["name"] + "'></div></td></tr>";
+						$("#creating-table-info").append(rowTemplate);
+						
+						createSparkline(object["name"]);
+						createProgressBar(object["name"]);
+					}
 
-
-
-					//求unfinishedDataMap差refreshMap的集合（需要删除的部分）
-					unfinishedDataMap.forEach(function(value, key) {
-						if(!refreshMap.has(value["name"])){
-							//needToDeleteArray.push(value);
-							$("#"+value["name"]).remove();
-						}
-					}); 
-					 
-					
+					//求unfinishedData差refreshSet的集合（需要删除的部分）
+					let needToDeleteSet = new Set([...refrunfinishedDataeshSet].filter(x => !refreshSet.has(x)));
+					for(let object in needToDeleteSet){
+						$("#"+object["name"]).remove();
+					}
 					//求交集（不需要更新UI的部分）（只更新交集的数据并不好）
-					//直接更新refreshMap的中对象的数据
-					//以及将unfinishedDataMap替换为现在的refreshMap
-					unfinishedDataMap.clear();
-					refreshMap.forEach(function(value, key){
-						unfinishedDataMap.set(key,value);
-						console.log("更新表格数据");
-						console.log(value);
+					//let intersectionSet = new Set([...refreshSet].filter(x => unfinishedData.has(x)));
+					//直接更新refreshSet的中对象的数据
+					for(let object in refreshSet){
 						//表格基础数据更新
-						$("#" + value["name"]+ "-num").html(value["fileNumCreated"] + "/" + value["fileNumTotal"]);
-						$("#" + value["name"]+ "-size").html(transform(value["fileSizeCreated"]) + "/" + transform(value["fileSizeTotal"]));
-						$("#" + value["name"]+ "-time").html(value["timeWasted"]);
-						
-						
-						
-						
-
-						//console.log($("#" + value["name"]+ "-time").html());
-						//console.log($("#" + value["name"]+ "-time").text());
+						$("#" + object["name"]+ "-num").html(object["fileNumCreated"] + "/" + object["fileNumTotal"]);
+						$("#" + object["name"]+ "-size").html(transform(object["fileSizeCreated"]) + "/" + transform(object["fileSizeTotal"]));
+						$("#" + object["name"]+ "-time").html(object["timeWasted"]);
 						//更新速度
-						let sparklineAll = getChartFromId('sparkline-'+value["name"]);
+						let sparklineAll = getChartFromId('sparkline-'+object["name"]);
 						let sparklineFormatData = sparklineAll.getChartData("json"); // 获取当前的数据
 						sparklineFormatData.dataset[0].data.shift();
-						let speedRate = (value["rate"] == "--")?{value: "0"}:{value: value["rate"]};
+						let speedRate = (object["rate"] == "--")?{value: "0"}:{value: object["rate"]};
 						sparklineFormatData.dataset[0].data.push(speedRate);
 						sparklineAll.setChartData(sparklineFormatData, "json");
 						//更新进度
-						let progressBarInTableRealData = (100 * value["fileSizeCreated"] / value["fileSizeTotal"])*100/100;//保留两位小数且为number
-						let progressBarInTable = getChartFromId('progress-'+value["name"]);
-						let progressBarInTableFormatData = progressBarInTable.getChartData("json");  // 当前的百分比
-						let showData = parseFloat(realProgressBarShowRate(progressBarInTableRealData, parseFloat(progressBarInTableFormatData.value), 1.5,[50,90,99])).toFixed(2);
-						let showText =  showData + '%';//更新进度条的数据
-						progressBarInTableFormatData.annotations.groups[0].items[0].text = showText;
-						progressBarInTableFormatData.value = showData;
-						progressBarInTable.setChartData(progressBarInTableFormatData, "json");
-						
-					});
+						let progressBarData = (100 * object["fileSizeCreated"] / object["fileSizeTotal"]).toFixed(2);
+						let progressBarAll = getChartFromId('progress-'+object["name"]);
+						let progressBarFormatData = progressBarAll.getChartData("json");  // 当前的百分比
+						progressBarData = realProgressBarShowRate(progressBarData, progressBarFormatData.value, 0.4,[50,90,99]);
+						let strText =  progressBarData + '%';//更新进度条的数据
+						progressBarFormatData.annotations.groups[0].items[0].text = strText;
+						progressBarFormatData.value = progressBarData;
+						progressBarAll.setChartData(progressBarFormatData, "json");
 
-					
+					}
+
+
 				}else{
 					$("#creating-table-info").empty();
 				}
@@ -509,9 +475,9 @@ function creatIndex(){
 
     console.log(totalPath);
 	$("#directory").val(totalPath);
-	$.post("/indexCreate/",{
+	$.post("/api_indexSearch/",{
 		"directory":totalPath,
-		"nodeIP":currentHostIP
+		"noedIP":currentHostIP
 	},function(){
 		alert("索引添加成功！");
 		window.location.reload();

@@ -1231,6 +1231,7 @@ def distributedIndexCreateStatus(message):
 			format_result = formatRemoteIndexCreateResult(result_list=r_list)
 			message.reply_channel.send({'text':json.dumps(format_result)})
 			time.sleep(1)
+			r_list = [getRemoteIndexCreateStatus(node.node_ip, pay_load) for node in node_query_set]
 		else:
 			r_list = filter(lambda x: x['code']==0, r_list)
 			print "Some Node's status was Wrong!"
