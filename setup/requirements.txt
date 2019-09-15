@@ -10,7 +10,7 @@ msgpack-python==0.4.8
 MySQL-python==1.2.5
 redis==2.10.5
 six==1.10.0
-Twisted==19.2.1
+Twisted==19.7.0
 txaio==2.6.1
 uWSGI
 zope.interface
