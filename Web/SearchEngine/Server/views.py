@@ -370,6 +370,29 @@ def api_getBlockContent(request):
 		return HttpResponse(json.dumps(result), content_type='application/json')
 
 @csrf_exempt
+def api_addNodeInfo(request):
+	result = {'code':1, 'message':'Only Support POST Method'}
+	if request.method=='POST':
+		hostIP = request.POST.get('hostIP', '')
+		hostName = request.POST.get('hostName', u'匿名')
+		hostIsAlive = request.POST.get('isAlive', True)
+		hostDefaultDirectory = request.POST.get('defaultDirectory', '/dataFile')
+		result = plugins.api_addNodeInfo(hostIP, hostName, hostIsAlive, hostDefaultDirectory)
+		return HttpResponse(json.dumps(result), content_type='application/json')
+	else:
+		return HttpResponse(json.dumps(result), content_type='application/json')
+
+@csrf_exempt
+def api_deleteNodeInfo(request):
+	result = {'code':1, 'message':'Only Support POST Method'}
+	if request.method=='POST':
+		hostIP = request.POST.get('hostIP', '')
+		result = plugins.api_deleteNodeInfo(hostIP)
+		return HttpResponse(json.dumps(result), content_type='application/json')
+	else:
+		return HttpResponse(json.dumps(result), content_type='application/json')
+
+@csrf_exempt
 def indexCreate(request):
 	result = {'code':1, 'message':'Only Support POST Method'}
 	if request.method=='POST':
@@ -377,11 +400,11 @@ def indexCreate(request):
 		node_ip = request.POST.get('nodeIP', '')
 		result = plugins.distributedIndexCreate(directory_string, node_ip)
 		if result['code']==0:
-			return HttpResponseRedirect('/dashboard/')
+			return HttpResponseRedirect('/testSingleNode/?ip='+node_ip)
 		else:
-			return HttpResponseRedirect('/dashboard/')
+			return HttpResponseRedirect('/testSingleNode/?ip='+node_ip)
 	else:
-		return HttpResponseRedirect('/dashboard/')
+		return HttpResponseRedirect('/testSingleNode/?ip='+node_ip)
 
 @csrf_exempt
 def indexSearch(request):

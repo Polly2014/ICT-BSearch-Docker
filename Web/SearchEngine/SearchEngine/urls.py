@@ -60,6 +60,7 @@ urlpatterns = [
 	url(r'^api_indexCreate/$', se_views.api_indexCreate, name='api_indexCreate'),
 	url(r'^api_indexCreateStatus/$', se_views.api_indexCreateStatus, name='api_indexCreateStatus'),
 	url(r'^api_getDirectoryBrowserInfo/$', se_views.api_getDirectoryBrowserInfo, name='api_getDirectoryBrowserInfo'),
-
+	url(r'^api_addNodeInfo/$', se_views.api_addNodeInfo, name='api_addNodeInfo'),
+	url(r'^api_deleteNodeInfo/$', se_views.api_deleteNodeInfo, name='api_deleteNodeInfo'),
 	#url(r'^static/(?P<path>.*)$', 'django.views.static.serve',{'document_root': settings.STATIC_ROOT }),
 ]

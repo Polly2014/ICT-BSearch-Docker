@@ -52,6 +52,9 @@ function getUrlParam(name) {
  *          <2>fixedSpeed:0.15 ;thresholdList:[25,50,75,99]
  */
 function realProgressBarShowRate(realProgress, showProgress, fixedSpeed,thresholdList){
+	if(realProgress==100){
+		return realProgress
+	}
     thresholdList.unshift(0);//在阈值表格的头部添加0防止越界操作
     var len=thresholdList.length;
     for(let i=1;i<len;i++){

@@ -37,25 +37,37 @@
         #table_info td{
             vertical-align: middle ;
         }
+		#additive-bt{
+			color:#777;
+			padding:3px 10px; 
+			border-radius:15px;
+			box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+		}
+		#additive-bt:hover{
+			color:black;
+			border-redius:15px;
+			cursor: pointer;
+			box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+		}
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <nav class="navbar navbar-fixed-top" role="navigation">
         <div class="container-fluid">
             <div class="navbar-header">
-                <image src="/static/images/bsearch-white.png">
-                <ul class="user-menu">
+                <!-- <image src="/static/images/bsearch-white.png"> -->
+                <ul class="user-menu" style="margin-right:100px;">
                     <li class="dropdown pull-right">
-                        <a href="#" id="additive-bt" style="padding-right: 30px;" data-toggle="modal" data-target="#AddModal">添加节点</a>
-                        <a href="#" style="padding-right: 30px;" class="dropdown-toggle" data-toggle="dropdown" >
+                        <a href="#" id="additive-bt" data-toggle="modal" data-target="#AddModal" style="">添加节点</a>
+                        <!-- <a href="#" style="padding-right: 30px;" class="dropdown-toggle" data-toggle="dropdown" >
                             用户 <span class="caret"></span>
-                        </a>
+                        </a> -->
                         
-                        <ul class="dropdown-menu" role="menu">
+                        <!-- <ul class="dropdown-menu" role="menu">
                             <li><a href="/logout/">退出</a></li>
                             <li><a href="#">帮助</a></li>
-                            <!-- svg图标 <li><a href="#"><svg class="glyph stroked cancel"><use xlink:href=""></use></svg>帮助</a></li> -->
-                        </ul>
+                    
+                        </ul>  -->
                         
                     </li>
                 </ul>
@@ -84,17 +96,17 @@
                                 <input type="text" class="form-control" id="input-node-name" >
                             </div>
                         </div>
-                        <div class="form-group">
+                        <!-- <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-10">
                                 <div class="checkbox">
                                     <label><input type="checkbox" id="input-node-active">是否激活</label>
                                 </div>
                             </div>
-                        </div>
+                        </div> -->
                         <div class="form-group">
                             <label for="input-node-dir" class="col-sm-2 control-label">默认目录</label>
                             <div class="col-sm-10">
-                                <input type="text" class="form-control" id="input-node-dir" value="/home">
+                                <input type="text" class="form-control" id="input-node-dir" value="/dataFiles" readonly="readonly" />
                             </div>
                         </div>
                     </div>
@@ -127,9 +139,9 @@
 						<thead>
 							<tr>
                                 <th onselectstart="return false;" style="width:20%">节点IP</th>
-                                <th onselectstart="return false;" style="width:20%">是否激活</th>
-                                <th onselectstart="return false;" style="width:40%">当前进度</th>
-                                <th onselectstart="return false;" style="width:20%">操作</th>
+                                <!-- <th onselectstart="return false;" style="width:20%">是否激活</th> -->
+                                <th onselectstart="return false;" style="width:50%">当前进度</th>
+                                <th onselectstart="return false;" style="width:30%">操作</th>
 								<!-- <th onselectstart="return false;">大小</th> -->
 							</tr>
 						</thead>
@@ -146,8 +158,10 @@
 </body>
 <script>
     var hostCache=new Set();//全局的表格对象控制（但只包含ip信息，ip信息绑定到表格的对应行上）
+	createPregressBar('all');
+    getClusterState();
     $(document).ready(function(){
-        //TODO:实际URL分配后修改页面上的href
+        
         //TODO:进度条还收否需要人为修改进度
         $("#btn-confirm").click(function(){
             var nodeIp=$("#input-node-ip").val();
@@ -158,19 +172,18 @@
             if(nodeIp == "" || nodeName == "" || nodeDir == ""){
                 return alert("存在空项，请检查！");   
             }
-            //TODO ：修改接口
-            $.post("",{
-                nodeIp:nodeIp,
-                nodeName:nodeName,
-                nodeDir:nodeDir
+            //NOTE:/api_addNodeInfo/当提交合理集群IP时没有问题，但在提交集群中不存在的IP时，会影响/api_indexCreateStatus/获取数据，导致表格无法正常显示
+            $.post("/api_addNodeInfo/",{
+                hostIP:nodeIp,
+                hostName:nodeName,
+                isActive:nodeHasActive,
+                defaultDirectory:nodeDir
             },function(){
                 alert("添加成功！");
                 $("#AddModal").modal('hide');
+                window.location.reload();
             })
         });
-        createPregressBar('all');
-        getClusterState();
-        
     });
     
 
@@ -198,8 +211,8 @@
                         if(!hostCache.has(item["node_ip"])){
                             hostCache.add(item["node_ip"]);
                             //console.log(hostCache);
-                            var template="<tr id='"+item["node_ip"]+"'><td>" + item["node_ip"] + "</td><td>"+
-                                    "已激活" +"</td>" + //TODO:修改激活信息
+                            var template="<tr id='"+item["node_ip"]+"'><td>" + item["node_ip"] + "</td>"+
+                                    //"<td>已激活" +"</td>" + 
                                     "<td id='host-"+item["node_ip"]+"-progress'></td><td>" +
                                     "<div class='table-node-operate'><a href=/testSingleNode?ip="+item["node_ip"]+">查看该节点信息</a>" +
                                         "<a onclick='deleteRowInTable(this)'>删除节点</a></div></td></tr>";
@@ -224,7 +237,9 @@
                     let progressRate = (100 * formatResult["data"]["summary"]["fileSizeCreated"] / formatResult["data"]["summary"]["fileSizeTotal"]).toFixed(2);
                     let progressBar = getChartFromId('progress-all');
                     let progressData = progressBar.getChartData("json");
+                    console.log("before rate update:"+progressRate+","+progressData.value);
                     progressRate = realProgressBarShowRate(progressRate, progressData.value, 0.4,[50,90,99]);
+                    console.log("after rate update:"+progressRate+","+progressData.value);
                     progressData.annotations.groups[0].items[0].text = progressRate + '%';
                     progressData.value = progressRate;
                     progressBar.setChartData(progressData, "json");
@@ -239,14 +254,15 @@
     }
     function deleteRowInTable(thisNode){
         //console.log(rowId);
-        //TODO:与后台交互
         var trNode = $(thisNode).parents('tr');
         var hostIp = trNode.attr("id");
-        $.post("",{
-
+        $.post("/api_deleteNodeInfo/",{
+            hostIP:hostIp
         },function(){
             hostCache.delete(hostIp);
             $(trNode).remove();
+            alert("删除成功");
+			window.location.reload();
         })
         
         

@@ -27,6 +27,7 @@
 		#a_home:hover{
 			text-decoration:none;
 		}
+		.form_hidden{display:hidden;}
 	</style>
 	<!--换算-->
 	<script>
@@ -164,7 +165,7 @@
 			var matches = JSON.stringify(result_detail[index].match_list);
 
 			action = '/fileContentBrowser/';
-			var form = $('<form></form>');
+			var form = $('<form class="form_hidden"></form>');
 			form.attr('action', action);
 			form.attr('method', 'post');
 			form.attr('target', '_blank');
@@ -179,6 +180,7 @@
 			form.append(input_node_ip);
 			$(document.body).append(form);
 			form.submit();
+			form.remove();
 			// console.log(form.html());
 			return false;
 		}
@@ -605,8 +607,8 @@
 -->
 	<h1>
 		<a id="a_home" href="/">
-			<font color="red"><b>b</b></font>
-			<font color="white" style="margin-left:-25px;">search</font>
+			<font color="red"><b>二进制</b></font>
+			<font color="white" style="margin-left:-25px;">搜索</font>
 		</a>
 		<span id="searchString" style="color:#4DC3FA;">{{ searchString }}</span>
 		<input id="input_scale" type="hidden" name="scale" value={{scale}} />

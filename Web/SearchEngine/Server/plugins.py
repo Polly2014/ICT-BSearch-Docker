@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 '''
 Created on 2016-11-30
 
@@ -27,7 +27,7 @@ BROWSERPATH = "/run/media/root/b9198c50-0ae7-4476-81dd-1d0a548046ad"
 ALGORITHMPATH = "/home/polly/GitHub/libdivsufsort/build/examples/"
 # HDFS_BROWSER_PATH = "/user/root"
 #BROWSERPATH = "/home/polly"
-BLOCKSIZE = int(1.98*1024*1024*1024)
+BLOCKSIZE = int(200*1024*1024)
 # BLOCKSIZE = int(200*1024*1024)
 MARGINSIZE = int(4*1024)
 CPUCORES = 10
@@ -1063,6 +1063,7 @@ def api_indexCreateStatus():
 		result['data'] = {"summary":summary, "detail":detail}
 	except Exception,e:
 		result['message'] = 'Get Index Create Status Failed, Because {}-{}'.format(Exception, e)
+		print "*************".format(result)
 	return result
 
 def api_multiIndexSearchStatus(searchStringList, relation):
@@ -1231,11 +1232,20 @@ def distributedIndexCreateStatus(message):
 			format_result = formatRemoteIndexCreateResult(result_list=r_list)
 			message.reply_channel.send({'text':json.dumps(format_result)})
 			time.sleep(1)
+			r_list = [getRemoteIndexCreateStatus(node.node_ip, pay_load) for node in node_query_set]
+			if random.uniform(0, 1)>0.95:
+				break
 		else:
-			r_list = filter(lambda x: x['code']==0, r_list)
 			print "Some Node's status was Wrong!"
-			format_result = formatRemoteIndexCreateResult(result_list=r_list)
-			message.reply_channel.send({'text':json.dumps(format_result)})
+			# print r_list
+			# r_list = filter(lambda x: x['code']==0, r_list)
+			# format_result = formatRemoteIndexCreateResult(result_list=r_list)
+			# print r_list
+			# message.reply_channel.send({'text':json.dumps(format_result)})
+			print "Restart Again After 1s.."
+			# time.sleep(1)
+			# message.reply_channel.send({'text':'restart'})
+			message.reply_channel.send({'text':'over'})
 	message.reply_channel.send({'text':'over'})
 
 def distributedMultiIndexSearchStatus(message):
@@ -1490,3 +1500,26 @@ def getRemoteBlockContent(_node_ip, _uri, _start, _length):
 	pay_load = {'_uri':_uri, '_start':_start, '_length':_length}
 	r = requests.post(node_url, data=pay_load)
 	return r.json()
+
+def api_addNodeInfo(hostIP, hostName, hostIsAlive, hostDefaultDirectory):
+	result = {'code':1, 'message':'Add Host Info Success!'}
+	try:
+		if len(NodeInfo.objects.filter(node_ip=hostIP)):
+			result['message'] = "Host Already Exist"
+		else:
+			node = NodeInfo(node_ip=hostIP, node_name=hostName, node_alive=hostIsAlive, node_active=True)
+			node.save()
+			result['code'] = 0
+	except Exception, e:
+		result['message'] = "Something Wrong: {}-{}".format(Exception, e)
+	return result
+
+def api_deleteNodeInfo(hostIP):
+	result = {'code':1, 'message':'Delete Host Info Success!'}
+	node_query_set = NodeInfo.objects.filter(node_ip=hostIP)
+	if len(node_query_set):
+		node_query_set.delete()
+		result['code'] = 0
+	else:
+		result['message'] = 'Host not Exist'
+	return result

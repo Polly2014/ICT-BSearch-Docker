@@ -192,7 +192,7 @@ function formValidAndSubmit(option){
 				$('#searchForm').submit();
 			}else{
 				var $errorMessage = $("#singleErrorMessage");
-				$errorMessage.html("* Search string format error!");
+				$errorMessage.html("* 输入格式错误，请输入二进制0,1且长度最少16位!");
 			}
 		});
 	}
@@ -207,7 +207,7 @@ function formValidAndSubmit(option){
 				$("#multiSearchForm").submit();
 			}else{
 				var $errorMessage = $("#multiErrorMessage");
-				$errorMessage.html("* Search string format error!");
+				$errorMessage.html("* 输入格式错误，请输入二进制0,1且长度最少16位!");
 			}
 		});
 	}
@@ -254,7 +254,7 @@ function showMultiSearch($this){
 Index Management | Search History | Help | About
 </div>-->
 	<div>
-	<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+	<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation" style="display:none;">
 		<div class="container-fluid">
 			<div class="navbar-header">
 				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar-collapse">
