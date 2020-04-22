@@ -1,0 +1,21 @@
+version: '3'
+services:
+  bsearch:
+    image: wangbaoli/bsearch_docker:v2.0
+    container_name: 'tmp'
+    ports:
+      - '80:80'
+      - '3303:3306'
+    volumes:
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/setup:/home/BSearch/setup
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Algorithm:/home/BSearch/Algorithm
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Web:/home/BSearch/Web
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Mysql/conf/my.cnf:/etc/mysql/my.cnf
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Mysql/data:/var/lib/mysql
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/indexFiles:/indexFiles
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/dataFiles:/dataFiles
+      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/configFiles:/configFiles
+    entrypoint:
+      /home/BSearch/setup/start_server
+    tty: true
+    privileged: true
