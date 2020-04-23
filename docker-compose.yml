@@ -7,14 +7,14 @@ services:
       - '80:80'
       - '3303:3306'
     volumes:
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/setup:/home/BSearch/setup
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Algorithm:/home/BSearch/Algorithm
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Web:/home/BSearch/Web
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Mysql/conf/my.cnf:/etc/mysql/my.cnf
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/Mysql/data:/var/lib/mysql
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/indexFiles:/indexFiles
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/dataFiles:/dataFiles
-      - /home/polly/GitHub_Workspace/ICT-BSearch-Docker/configFiles:/configFiles
+      - /home/BSearch/setup:/home/BSearch/setup
+      - /home/BSearch/Algorithm:/home/BSearch/Algorithm
+      - /home/BSearch/Web:/home/BSearch/Web
+      - /home/BSearch/Mysql/conf/my.cnf:/etc/mysql/my.cnf
+      - /home/BSearch/Mysql/data:/var/lib/mysql
+      - /home/BSearch/indexFiles:/indexFiles
+      - /home/BSearch/dataFiles:/dataFiles
+      - /home/BSearch/configFiles:/configFiles
     entrypoint:
       /home/BSearch/setup/start_server
     tty: true
