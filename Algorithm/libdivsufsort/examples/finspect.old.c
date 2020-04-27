@@ -1,8 +1,8 @@
 /*
  * finspect.c
  *
- *  Created on: Feb 24, 2020
- *      Author: Abe Wu, Polly
+ *  Created on: Feb 8, 2017
+ *      Author: Abe Wu
  *
  *
 Input:
@@ -159,7 +159,7 @@ static void print_match_html(html_css css, FILE *fp, off_t flength, off_t offset
      * cap.dat   0x00112230  61 62 63 64 65 66 67 68  abcdefgh  01100001 01100010 01100011 01100100  01100101 01100110 01100111 01101000
      * cap.dat   0x00112238 ...
      */
-    // printf("\t<tr class='%s'>\n", css->tr_class);
+    printf("\t<tr class='%s'>\n", css->tr_class);
 
 //    printf("<td>");
     // Match start at this line
@@ -202,8 +202,88 @@ static void print_match_html(html_css css, FILE *fp, off_t flength, off_t offset
 		return;
 	}
 
+    /* Offset in DEC */
+    printf("\t\t<td class='%s'>\n", css->td_class_offset);
+    for (line = first_line; line <= last_line; line++)
+    {
+        if (line > first_line) printf("<br>");
+        printf("%d", line * 8);
+    }
+    printf("</td>\n");
+
+    /* Offset in HEX */
+    printf("\t\t<td class='%s'>\n", css->td_class_offset_hex);
+    for (line = first_line; line <= last_line; line++)
+    {
+        if (line > first_line) printf("<br>");
+        printf("0x%.8X", line * 8);
+    }
+    printf("</td>\n");
+
+    /* Hex values */
+    printf("\t\t<td class='%s'>\n", css->td_class_hex);
+    for (line = first_line; line <= last_line; line++)
+    {
+        if (line > first_line) printf("<br>");
+        for (i = 0; i < bytes_per_line; i++)
+        {
+        	/* Emphasize the matched part */
+        	if ((line == match_start_line && i == match_start_byte)
+        		|| (line > match_start_line && line <= match_end_line && i == 0)) {
+        		printf("%s", css->matched_prefix);
+        	}
+
+            printf("%.2X ", buf[(line - first_line) * bytes_per_line + i]);
+
+        	if ((line >= match_start_line && line < match_end_line && (i == bytes_per_line - 1))
+        		|| (line == match_end_line && i == match_end_byte)) {
+        		printf("%s", css->matched_suffix);
+        	}
+
+        }
+    }
+    printf("</td>\n");
+
+    /* ASCII values */
+    printf("\t\t<td class='%s'>\n", css->td_class_ascii);
+    for (line = first_line; line <= last_line; line++)
+    {
+        if (line > first_line) printf("<br>");
+        for (i = 0; i < bytes_per_line; i++)
+        {
+        	/* Emphasize the matched part */
+        	if ((line == match_start_line && i == match_start_byte)
+        		|| (line > match_start_line && line <= match_end_line && i == 0)) {
+        		printf("%s", css->matched_prefix);
+        	}
+
+        	/* printf the ascii code */
+        	char ascii = buf[(line - first_line) * bytes_per_line + i];
+        	ascii = ascii >= 32 && ascii <= 126 ? ascii : '.';
+            if (isspace(ascii))
+            {
+                printf("&nbsp;");
+            }
+            else if (isalnum(ascii))
+            {
+                printf("%c", ascii);
+            }
+            else
+            {
+                printf("&#%d;", ascii);
+            }
+
+        	if ((line >= match_start_line && line < match_end_line && (i == bytes_per_line - 1))
+        		|| (line == match_end_line && i == match_end_byte)) {
+        		printf("%s", css->matched_suffix);
+        	}
+
+        }
+    }
+    printf("</td>\n");
+
     /* bit values */
-    // printf("\t\t<td class='%s'>\n", css->td_class_bit);
+    printf("\t\t<td class='%s'>\n", css->td_class_bit);
     for (line = first_line; line <= last_line; line++)
     {
         if (line > first_line) printf("<br>");
@@ -232,10 +312,9 @@ static void print_match_html(html_css css, FILE *fp, off_t flength, off_t offset
             }
         }
     }
-    // printf("</td>\n");
+    printf("</td>\n");
 
-    // printf("</tr>\n");
-    printf("\n");
+    printf("</tr>\n");
 
     free(buf);
 }

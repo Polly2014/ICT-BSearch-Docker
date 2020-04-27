@@ -516,3 +516,84 @@ def blockContentBrowser(request):
 		return HttpResponse(json.dumps(result), content_type='application/json')
 	else:
 		return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+# --------------------------------------------------- #
+# Added For New Interface Request
+# Added By Polly
+# Added in 2020-04-24
+@csrf_exempt
+def api_binarySearchResult(request):
+	result = {'code':1, 'message':'Only Support POST Method'}
+	if request.method=='POST':
+		scale = int(request.POST.get("scale", 0))
+		search_string = request.POST.get("search_string", "")
+		pageNum = int(request.POST.get('pageNum', 1))
+		pageSize = int(request.POST.get('pageSize', 50))
+		order = int(request.POST.get('order', 0))
+		expandedName = request.POST.get('expandedName', '')
+		if scale==0 or search_string=="":
+			result['message'] = 'Wrong Scale or SearchString Input'
+		else:
+			pay_load = {'search_string': search_string, 'scale':scale, 'pageNum':pageNum, 'pageSize':pageSize, 'order':order, 'expandedName':expandedName}
+			result = plugins.api_binarySearchResult(pay_load)
+		return HttpResponse(json.dumps(result), content_type='application/json')
+	else:
+		return HttpResponse(json.dumps(result), content_type='application/json')
+
+@csrf_exempt
+def api_binarySearch(request):
+	data = {'total':0, 'records':[]}
+	result = {'resultCode':0, 'message':u'响应成功', 'data':{}}
+	if request.method=='POST':
+		# Get Parameters
+		keyword = request.POST.get('keyword', '')
+		operateType = int(request.POST.get('operateType', 0))
+		pageNum = int(request.POST.get('pageNum', 1))
+		pageSize = int(request.POST.get('pageSize', 50))
+		order = int(request.POST.get('order', 0))
+		expandedName = request.POST.get('expandedName', '')
+		binaryType = int(request.POST.get('binaryType', 0))
+		extention = request.POST.get('extention', '')
+
+		# Parameters Judge
+		if not keyword:
+			result['resultCode'] = 2002
+			result['message'] = u'[参数错误] No keyword'
+			return result
+		if not operateType in range(0,4):
+			result['resultCode']= 2002
+			result['message'] = u'[参数错误] operateType should be in [0-3]'
+			return result
+		if not order in range(0,2):
+			result['resultCode']= 2002
+			result['message'] = u'[参数错误] order should be in [0-1]'
+			return result
+		if not pageNum>0:
+			result['resultCode']= 2002
+			result['message'] = u'[参数错误] pageNum should greater than 1'
+			return result
+		if not binaryType in range(0,2):
+			result['resultCode']= 2002
+			result['message'] = u'[参数错误] binaryType should be in [0-1]'
+			return result
+
+		# Nomalize Parameters
+		LIST_OPTION = ['no','negate','reverse','HLreverse']
+		scale = 2 if binaryType==0 else 16
+		option = LIST_OPTION[operateType]
+		search_string = plugins.changeString(keyword, scale, option)
+
+		# Search Program Run
+		r_search = plugins.distributedIndexSearch(search_string, scale)
+		if r_search['code']==0:
+			# Gether Result From All Nodes
+			pay_load = {'search_string': search_string, 'scale':scale, 'pageNum':pageNum, 'pageSize':pageSize, 'order':order, 'expandedName':expandedName}
+			r_return = plugins.api_getBinarySearchResult(pay_load)
+			result = r_return
+		else:
+			result['message'] = r
+	else:
+		result['resultCode'] = 2005
+		result['message'] = u'[请求错误] HTTP方法不支持'
+	return HttpResponse(json.dumps(result), content_type='application/json')
