@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 '''
 Created on 2016-11-30
 
@@ -16,6 +16,7 @@ import numpy as np
 from django.db import connections
 import requests
 import math
+import os
 
 ISOTIMEFORMAT = '%Y-%m-%d %X'
 CONFIGFILEPATH = "configFiles/"
@@ -55,15 +56,6 @@ MATCHCONFIG = {
 	},
 	"matches": []
 }
-
-# a = HDFSAnalyser()
-# a.connect(HDFS_HOSTNAME, HDFS_PORT)
-
-# 192.168.56.102
-CONFIGFILEPATH_ABS = "/media/sf_Bsearch/configFiles/"
-INDEXFILEPATH_ABS = "/media/sf_Bsearch/indexFiles/"
-BROWSERPATH = "/media/sf_Bsearch/Test"
-ALGORITHMPATH = "/home/polly/GitHub/libdivsufsort/build/examples/"
 
 #############################
 # Author: Polly
@@ -172,7 +164,7 @@ def getDetailMatchInfo(file_name='', match_list=[]):
 		json.dump(MATCHCONFIG, f, sort_keys = True, indent = 4, ensure_ascii = False)
 		#f.write(json.dumps(MATCHCONFIG))
 	# cmd = "./finspect "+CONFIGFILEPATH+"match.json"
-	cmd = "{}finspect {}match.json".format(ALGORITHMPATH, CONFIGFILEPATH_ABS)
+	cmd = "finspect {}match.json".format(CONFIGFILEPATH_ABS)
 	p = subprocess.Popen(cmd, shell=True, cwd=ALGORITHMPATH, stdout=subprocess.PIPE)
 	#p.communicate()
 	result = p.stdout.read()
@@ -690,82 +682,6 @@ def stringCacheExistJudge(search_string):
 		result["message"] = "Search string has no cache history!"
 	#return True if num_configs==num_config_caches else False
 	return result
-'''
-def runIndexCacheSearchProgram(search_string):
-	cache_query_set = SearchResultCache.objects.filter(search_string=search_string)
-	result_list = []
-	print 'Ah~Ah~Ah~'
-	for c in cache_query_set:
-		result_list.extend(json.loads(c.search_content))
-	return result_list
-
-def runIndexDiskSearchProgram(search_string):
-	config_query_set = AlgorithmConfigInfo.objects.filter(config_flag=1)
-	pool = multiprocessing.Pool(processes=CPUCORES)
-	for config in config_query_set:
-		configFile = CONFIGFILEPATH+config.config_name
-		pool.apply_async(indexSearchProgram, args=(search_string, configFile,))
-	pool.close()
-	#pool.join()
-	return "IndexSearchProgram run successful"
-'''
-'''
-def ws_receive_search(message):
-	request = json.loads(message.content["text"])
-	if request["type"]=='searchInformation':
-		search_string = request["searchString"]
-		cache_query_set = SearchResultCache.objects.filter(search_string=search_string)
-		num_configs = len(AlgorithmConfigInfo.objects.all())
-		num_config_caches = len(cache_query_set)
-		if num_configs==num_config_caches:
-			time_start = time.time()
-			result_list = []
-			for c in cache_query_set:
-				result_list.extend(json.loads(c.search_content))
-			time_end = time.time()
-			format_result = plugins.formatIndexSearchResult(result_list)
-			format_result["summary"]["time_cost"] = "{:.4f}".format(time_end-time_start)
-			format_result["summary"]["flag"] = 1
-			message.reply_channel.send({
-				"text": json.dumps(format_result)
-			})
-		else:
-			plugins.runIndexSearchProgram(search_string)
-			time_start = time.time()
-			while True:
-				cache_query_set = SearchResultCache.objects.filter(search_string=search_string)
-				num_config_caches = len(cache_query_set)
-				if num_configs>num_config_caches:
-					result_list = []
-					for c in cache_query_set:
-						result_list.extend(json.loads(c.search_content))
-					time_end = time.time()
-					format_result = plugins.formatIndexSearchResult(result_list)
-					format_result["summary"]["time_cost"] = "{:.4f}".format(time_end-time_start)
-					format_result["summary"]["flag"] = 0
-					message.reply_channel.send({
-						"text": json.dumps(format_result),
-					})
-					time.sleep(1)
-				else:
-					result_list = []
-					for c in cache_query_set:
-						result_list.extend(json.loads(c.search_content))
-					time_end = time.time()
-					format_result = plugins.formatIndexSearchResult(result_list)
-					format_result["summary"]["time_cost"] = "{:.4f}".format(time_end-time_start)
-					format_result["summary"]["flag"] = 1
-					message.reply_channel.send({
-						"text": json.dumps(format_result),
-					})
-					print "It's time to break"
-					break
-		print "Jump out of the loop successfull!"
-		message.reply_channel.send({"text":"Over"})
-	else:
-		message.reply_channel.send({"text":"Over"})
-'''
-
 
 
 def getBrowserInfo(base_dir=BROWSERPATH):
@@ -827,7 +743,7 @@ def changeString(searchString, scale, option):
 			result = "".join([s[::-1] for s in re.findall(".{8}", searchString)])
 			print "Binary String: "+result
 		else:
-			pass
+			result=searchString
 	elif scale==16:
 		if option=="trans":
 			result = "".join([bin(ord(s)).replace('0b','') for s in searchString])
@@ -848,7 +764,7 @@ def changeString(searchString, scale, option):
 			# result = "".join([s[::-1] for s in result])
 			print "Hex String: "+result
 		else:
-			pass
+			result = searchString
 	else:
 		pass
 	return result
@@ -1523,3 +1439,96 @@ def api_deleteNodeInfo(hostIP):
 	else:
 		result['message'] = 'Host not Exist'
 	return result
+
+
+# --------------------------------------------------- #
+# Added For New Interface Request
+# Added By Polly
+# Added in 2020-04-23
+def formatBinarySearchResult(cache_result=[], condition={}):
+	result = {'resultCode':1000, 'data':{'total':0, 'records':[]}, 'message':'响应成功'}
+	if cache_result:
+		file_name_list = list(set([r["name"] for r in cache_result]))
+		pageNum = condition['pageNum']
+		pageSize = condition['pageSize']
+		expandedName = condition['expandedName']
+		if expandedName:
+			file_name_list = list(filter(lambda x:x['name'].split('.',1)[1]==expandedName, file_name_list))
+		if condition['order']==1:
+			file_name_list.sort(lambda x: os.path.getctime(x['name']))
+		start = (pageNum-1)*pageSize
+		end = pageNum*pageSize
+		if len(file_name_list)<start:
+			result['resultCode'] =2002
+			result['message'] = '[Error] Request length is longer than result length.'
+			return result
+		if len(file_name_list)>=start and len(file_name_list)<end:
+			file_name_list = file_name_list[start:]
+		else:
+			file_name_list = file_name_list[start:end]
+		for file_name in file_name_list:
+			try:    
+				item = {}
+				f = FileInfo.objects.filter(filefullpathname=file_name)[0]
+				item["fileName"] = file_name
+				item["filePath"] = f.directory_info.dir_name
+				item["expandedName"] = f.filename.split('.',1)[1]
+				item["fileSize"] = f.filesize
+				item["fileTime"] = time.ctime(os.path.getctime(file_name))
+				item["locations"] = [{"start":r["offset"]*8+r["offset_bit"], "end":r["offset"]*8+r["offset_bit"]+r["length"]} for r in cache_result if r["name"]==file_name]
+				item["matchCount"] = len(item["locations"])
+				match_detail = [{"offset":r["offset"], "offset_bit":r["offset_bit"], "length_bit":r["length"]} for r in cache_result if r["name"]==file_name]
+				match_list = str(getDetailMatchInfo(file_name, match_detail)).split('\n')
+				for idx, data in enumerate(item["locations"]):
+					item["locations"][idx]["highlight"] = match_list[idx]
+				result['data']['records'].append(item)
+			except Exception, e:
+				print "@@@ FAILED {}-{}".format(Exception, e)
+				continue
+		result['data']['total'] = len(file_name_list)
+	else:
+		result['resultCode'] = 1000
+		result['message'] = '无记录'
+	return result
+
+def formatBinarySearchResults(result_list):
+	return result_list[0]['message']
+
+def api_binarySearchResult(pay_load):
+	result = {'code':0, 'message': ''}
+	search_string = pay_load['search_string']
+	scale = pay_load['scale']
+	search_string = search_string if scale==2 else hex2bin(search_string)
+	result['code'] = indexCacheExistJudge(search_string)['code']
+	cache_result, cache_query_set, _ = getIndexCacheSearchResult(search_string)
+	result['message'] = formatBinarySearchResult(cache_result, pay_load)
+	return result
+
+def getRemoteBinarySearchResult(node_ip, pay_load):
+	node_url = u"http://{}:80/api_binarySearchResult/".format(node_ip)
+	try:
+		r = requests.post(node_url, data=pay_load)
+		if r.status_code==200:
+			r = r.json()
+			r['node_ip'] = node_ip
+		else:
+			r = {'code':1, 'message':'Response Error, Code:{}'.format(r.status_code), 'node_ip':node_ip}
+	except Exception,e:
+		r = {'code':2001, 'message':'Request Timeout', 'node_ip':node_ip}
+	return r
+
+def api_getBinarySearchResult(pay_load):
+	node_query_set = NodeInfo.objects.filter(node_active=True)
+	r_list = [getRemoteBinarySearchResult(node.node_ip, pay_load) for node in node_query_set]
+	while sum([r['code'] for r in r_list])>0:
+		num_node_searched = len(filter(lambda r:r['code']==0, r_list))
+		num_node_total = len(r_list)
+		print "#Cache# num_node_searched[{}] < num_node_total[{}]".format(num_node_searched, num_node_total)
+		time.sleep(1)
+		r_list = [getRemoteBinarySearchResult(node.node_ip, pay_load) for node in node_query_set]
+	else:
+		num_node_searched = len(filter(lambda r:r['code']==0, r_list))
+		num_node_total = len(r_list)
+		print "#Cache# num_node_searched[{}] == num_node_total[{}]".format(num_node_searched, num_node_total)
+		format_result = formatBinarySearchResults(r_list)
+	return format_result
