@@ -369,6 +369,10 @@ def api_getBlockContent(request):
 	else:
 		return HttpResponse(json.dumps(result), content_type='application/json')
 
+# ----------------------------- #
+# Added For Check Node's IP is OK or Not
+# Added By Polly
+# Added in 2020-05-19
 @csrf_exempt
 def api_addNodeInfo(request):
 	result = {'code':1, 'message':'Only Support POST Method'}
@@ -377,7 +381,10 @@ def api_addNodeInfo(request):
 		hostName = request.POST.get('hostName', u'匿名')
 		hostIsAlive = request.POST.get('isAlive', True)
 		hostDefaultDirectory = request.POST.get('defaultDirectory', '/dataFile')
-		result = plugins.api_addNodeInfo(hostIP, hostName, hostIsAlive, hostDefaultDirectory)
+		if plugins.checkHostIP(hostIP):
+			result = plugins.api_addNodeInfo(hostIP, hostName, hostIsAlive, hostDefaultDirectory)
+		else:
+			result['message'] = u'主机IP地址不合法，请检查后重新填写'
 		return HttpResponse(json.dumps(result), content_type='application/json')
 	else:
 		return HttpResponse(json.dumps(result), content_type='application/json')

@@ -178,10 +178,17 @@
                 hostName:nodeName,
                 isActive:nodeHasActive,
                 defaultDirectory:nodeDir
-            },function(){
-                alert("添加成功！");
-                $("#AddModal").modal('hide');
-                window.location.reload();
+            },function(data){
+                console.log(data);
+                if(data['code']==1){
+                    alert(data['message']);
+                }else{
+                    alert("添加成功！");
+                    $("#AddModal").modal('hide');
+                    window.location.reload();    
+                }
+
+                
             })
         });
     });

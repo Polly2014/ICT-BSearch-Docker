@@ -28,6 +28,17 @@
 			text-decoration:none;
 		}
 		.form_hidden{display:hidden;}
+		.searchString{
+			display: inline-block;
+			width: 600px;
+			height: 0.8em;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.searchString:hover{
+			width: auto;
+			cursor: pointer;
+		}
 	</style>
 	<!--换算-->
 	<script>
@@ -610,7 +621,7 @@
 			<font color="red"><b>二进制</b></font>
 			<font color="white" style="margin-left:-25px;">搜索</font>
 		</a>
-		<span id="searchString" style="color:#4DC3FA;">{{ searchString }}</span>
+		<span id="searchString" class="searchString" style="color:#4DC3FA;">{{ searchString }}</span>
 		<input id="input_scale" type="hidden" name="scale" value={{scale}} />
 	</h1>
 

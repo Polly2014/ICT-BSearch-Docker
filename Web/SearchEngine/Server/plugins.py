@@ -1440,6 +1440,26 @@ def api_deleteNodeInfo(hostIP):
 		result['message'] = 'Host not Exist'
 	return result
 
+# --------------------------------------- #
+# Added For Check Node's IP is OK or Not
+# Added By Polly
+# Added in 2020-05-19
+def checkHostIP(hostIP):
+	ip_list_file = '/home/BSearch/setup/ip_list'
+	if os.path.exists(ip_list_file):
+		ip_list = []
+		with open(ip_list_file, 'r+') as f:
+			ip_list = f.readlines()
+		ip_list = [ip.strip() for ip in ip_list]
+		return True if hostIP in ip_list else False
+	else:
+		f = open(ip_list_file, 'w+')
+		node_query_set = NodeInfo.objects.filter(node_active=True)
+		ip_list = [node.node_ip for node in node_query_set]
+		f.writelines(ip_list)
+		f.close()
+		return False
+
 
 # --------------------------------------------------- #
 # Added For New Interface Request

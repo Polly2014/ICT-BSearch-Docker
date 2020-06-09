@@ -192,7 +192,11 @@ function formValidAndSubmit(option){
 				$('#searchForm').submit();
 			}else{
 				var $errorMessage = $("#singleErrorMessage");
-				$errorMessage.html("* 输入格式错误，请输入二进制0,1且长度最少16位!");
+				if(scale==2){
+					$errorMessage.html("* 输入格式错误，请输入二进制0,1且长度最少16位!");
+				}else{
+					$errorMessage.html("* 输入格式错误，请输入十六进制a-zA-Z且长度最少4位!");
+				}
 			}
 		});
 	}

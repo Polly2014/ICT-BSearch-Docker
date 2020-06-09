@@ -527,7 +527,7 @@ sa_bitgrep_filelist(file_list raw_files, const sauchar_t *P, saidx_t Psize, FILE
 	j = 0;
 
 	/* Sanity check */
-	if (Psize <= minimum_bits || Psize > sizeof(regex_buf) - 16) {
+	if (Psize < minimum_bits || Psize > sizeof(regex_buf) - 16) {
 		exit_result(1, "Input parameter invalid: too short or too long");
 	}
 	for (i = 0; i < Psize; i++) {
