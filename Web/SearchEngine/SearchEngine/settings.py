@@ -112,9 +112,9 @@ DATABASES = {
 		# }
 		# 'ENGINE': 'django.db.backends.postgresql_psycopg2',
 		'ENGINE': 'django.db.backends.mysql',
-		'NAME': 'xxxxxx',
-		'USER':'xxxxxx',
-		'PASSWORD':'xxxxxx',
+		'NAME': 'bsearch',
+		'USER':'root',
+		'PASSWORD':'qazwsx',
 		'HOST':'localhost',
 		#'PORT':'5432',
 		'PORT':'3306',
