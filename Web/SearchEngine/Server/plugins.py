@@ -998,6 +998,8 @@ def getRemoteIndexSearchStatus(node_ip, pay_load):
 		r['node_ip'] = node_ip
 	else:
 		r = {'code':1, 'message':[0, 0], 'data':{}, 'node_ip':node_ip}
+	# print('Result of Search Status From Node-[{}]'.format(node_ip))
+	# print(r)
 	return r
 
 def getRemoteIndexCreateStatus(node_ip, pay_load):
@@ -1375,19 +1377,20 @@ def api_getBlockContent(_uri, _start, _length):
 		data = np.asarray(list(data))
 		data.dtype = np.uint8
 		result['data'] = data.tolist()
+	# print('[API INFO: api_getBlockContent] {}'.format(result))
 	return result
 
-def api_initFileContent(_uri, _matches):
+def api_initFileContent(_uri, _matches, itemNum):
 	result = {'code':1, 'message':''}
 	try:
 		fileLength = getFileLength(_uri)
 		theMatches = getFileMatchesInfo(_uri, _matches)
-		itemNum = 20
 		pageNum = int(math.ceil(len(theMatches)/float(itemNum)))
 		result['code'] = 0
 		result['message'] = {"fileName":_uri, "matches":json.dumps(theMatches, ensure_ascii=False), "pageNum":pageNum, "itemNum":itemNum, "fileLength":fileLength}
 	except Exception,e:
 		result['message'] = "Something Wrong: {}-{}".format(Exception, e)
+	# print('[API INFO: api_initFileContent] {}'.format(result))
 	return result
 
 def fileContentReader(request):
@@ -1408,6 +1411,9 @@ def fileContentReader(request):
 def getRemoteFileContent(_node_ip, _uri, _matches):
 	node_url = u"http://{}:80/api_initFileContent/".format(_node_ip)
 	pay_load = {'_uri':_uri, '_matches':json.dumps(_matches)}
+	# print('=========== File Content Request ===============')
+	# print('_URI:{}, _matches:{}'.format(_uri, _matches))
+	# print('================================================')
 	r = requests.post(node_url, data=pay_load)
 	return r.json()
 
@@ -1463,6 +1469,7 @@ def checkHostIP(hostIP):
 
 # --------------------------------------------------- #
 # Added For New Interface Request
+# Interface For Binary Search Summary For All Files
 # Added By Polly
 # Added in 2020-04-23
 def formatBinarySearchResult(cache_result=[], condition={}):
@@ -1473,7 +1480,7 @@ def formatBinarySearchResult(cache_result=[], condition={}):
 		pageSize = condition['pageSize']
 		expandedName = condition['expandedName']
 		if expandedName:
-			file_name_list = list(filter(lambda x:x['name'].split('.',1)[1]==expandedName, file_name_list))
+			file_name_list = list(filter(lambda x:os.path.splitext(x)[1]==expandedName, file_name_list))
 		if condition['order']==1:
 			file_name_list.sort(lambda x: os.path.getctime(x['name']))
 		start = (pageNum-1)*pageSize
@@ -1552,3 +1559,36 @@ def api_getBinarySearchResult(pay_load):
 		print "#Cache# num_node_searched[{}] == num_node_total[{}]".format(num_node_searched, num_node_total)
 		format_result = formatBinarySearchResults(r_list)
 	return format_result
+
+# --------------------------------------------------- #
+# Added For New Interface Request
+# Interface For Binary Search Detail in One File
+# Added By Polly
+# Added in 2020-07-23
+
+# Format Search Detail Info in Target File
+def formatBinarySearchDetail(cache_result=[], condition={}):
+	if cache_result:
+		location_list = [{"offset":r["offset"], "offset_bit":r["offset_bit"], "length_bit":r["length"]} for r in cache_result if r["name"]==condition['filePath']]
+		highlight_list = str(getDetailMatchInfo(condition['filePath'], location_list)).split('\n')
+		# print('Highlight List:{}'.format(highlight_list))
+		detail_list = [{"start":r["offset"]*8+r["offset_bit"], "end":r["offset"]*8+r["offset_bit"]+r["length"]} for r in cache_result if r['name']==condition['filePath']]
+		for idx, data in enumerate(detail_list):
+			detail_list[idx]["highlight"] = highlight_list[idx]
+		detail = detail_list[(condition['pageNum']-1)*condition['pageSize']:condition['pageNum']*condition['pageSize']]
+		return {'fileResultDetail': detail}
+	else:
+		return {}
+
+
+# Get Search Detail Info in Target File
+def api_binarySearchDetail(pay_load):
+	result = {'code':0, 'message': ''}
+	search_string = pay_load['search_string']
+	scale = pay_load['scale']
+	search_string = search_string if scale==2 else hex2bin(search_string)
+	result = indexCacheExistJudge(search_string)
+	if result['code']==0:
+		cache_result, cache_query_set, _ = getIndexCacheSearchResult(search_string)
+		result['message'] = formatBinarySearchDetail(cache_result, pay_load)
+	return result

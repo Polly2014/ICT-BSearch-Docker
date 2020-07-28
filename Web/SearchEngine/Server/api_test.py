@@ -1,14 +1,15 @@
 # -*- coding:utf-8 -*-
 import requests
 
-host_url = 'http://159.226.40.82:33380/api/search/binarySearch'
+# host_url = 'http://159.226.40.82:33380/api/search/binarySearch'
+host_url = 'http://10.5.0.226/api/search/binarySearch'
 payload = {
     'keyword': '1010101010101001010',
     'operateType': 0,
     'pageNum': 1,
     'pageSize': 5,
     'order': 0,
-    'expandedName': '',
+    'expandedName': 'tar.gz',
     'binaryType': 0,
     'extention': ''
 }
